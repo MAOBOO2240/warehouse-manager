@@ -1,0 +1,87 @@
+# 在 GitHub 雲端自動編譯 Windows 免安裝版 WarehouseManager.exe
+# 觸發：推送到 main/master、推送 v* 標籤，或在 Actions 頁面手動執行
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'index.html'
+      - 'vite.config.js'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: 取得原始碼
+        uses: actions/checkout@v4
+        with:
+          # 由解壓流程呼叫時，要取得解壓後最新的提交
+          ref: ${{ startsWith(github.ref, 'refs/tags/') && github.ref || 'main' }}
+
+      - name: 安裝 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 安裝 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安裝 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust 編譯快取
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: 產生程式圖示
+        run: |
+          pip install pillow
+          python scripts/make_icons.py
+
+      - name: 安裝前端套件
+        run: npm install
+
+      - name: 建置前端
+        run: npm run build
+
+      - name: 執行 Rust 單元測試（原子寫入、備份還原、負庫存阻擋）
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: 編譯免安裝 EXE
+        run: npx tauri build --no-bundle
+
+      - name: 整理輸出檔案
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          $exe = "src-tauri/target/release/warehouse-manager.exe"
+          if (-not (Test-Path $exe)) { $exe = (Get-ChildItem src-tauri/target/release/*.exe | Select-Object -First 1).FullName }
+          Copy-Item $exe out/WarehouseManager.exe
+          Get-Item out/WarehouseManager.exe | Select-Object Name, Length
+
+      - name: 上傳 EXE（Actions 頁面可下載）
+        uses: actions/upload-artifact@v4
+        with:
+          name: WarehouseManager-windows
+          path: out/WarehouseManager.exe
+          if-no-files-found: error
+
+      - name: 建立 Release（僅限 v* 標籤）
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/WarehouseManager.exe
