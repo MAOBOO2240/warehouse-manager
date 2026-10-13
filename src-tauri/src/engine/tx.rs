@@ -95,6 +95,7 @@ pub enum TxRequest {
         location_id: String,
         quantity: i64,
         reason: String,
+        #[serde(default)]
         note: String,
     },
 }
@@ -103,6 +104,8 @@ pub enum TxRequest {
 pub struct TxOutcome {
     pub inventory: Vec<InvRow>,
     pub new_logs: Vec<LogEntry>,
+    /// 首次入庫時會記錄商品的 first_qty，此時回傳更新後的商品清單
+    pub products: Option<Vec<Value>>,
 }
 
 fn text(v: &Option<String>) -> String {
@@ -144,12 +147,19 @@ impl<'a> Ctx<'a> {
             .map(|s| s.to_string())
             .ok_or_else(|| AppError::not_found(format!("找不到商品 {id}，可能已被刪除")))
     }
+    /// 存放地點為自由輸入（可空白代表「未指定」），不需預先建立；
+    /// 若 locations.json 有舊資料也一律接受。
     fn ensure_location(&self, id: &str) -> AppResult<()> {
         if self.locations.contains(id) {
-            Ok(())
-        } else {
-            Err(AppError::not_found(format!("找不到庫位 {id}，可能已被刪除")))
+            return Ok(());
         }
+        if id.chars().count() > 50 {
+            return Err(AppError::invalid("存放地點請在 50 個字以內"));
+        }
+        if id.chars().any(|c| c.is_control()) || id != id.trim() {
+            return Err(AppError::invalid("存放地點格式不正確"));
+        }
+        Ok(())
     }
 }
 
@@ -338,7 +348,11 @@ pub fn compute(
             reason,
             note,
         } => {
-            let (r, n) = required_reason(reason, note, "損壞")?;
+            let r = reason.trim().to_string();
+            if r.is_empty() {
+                return Err(AppError::invalid("請選擇或填寫損壞原因"));
+            }
+            let n = note.trim().to_string();
             deduct(
                 &ctx,
                 &mut logs,
@@ -522,7 +536,30 @@ pub fn run_transaction(dir: &Path, tx: &TxRequest) -> AppResult<TxOutcome> {
     let journal = json!({ "inventory": inventory, "new_logs": new_logs });
     write_json_atomic(dir, PENDING_FILE, &journal, false)?;
     commit_pending(dir)?;
-    Ok(TxOutcome { inventory, new_logs })
+
+    // 首次入庫：記錄該商品的入庫數量，之後選擇此商品時自動帶入
+    let mut updated_products = None;
+    if let TxRequest::Inbound {
+        product_id, quantity, ..
+    } = tx
+    {
+        let mut list = products;
+        if let Some(p) = list.iter_mut().find(|p| str_field(p, "id") == product_id.as_str()) {
+            let has_first = p.get("first_qty").and_then(Value::as_i64).unwrap_or(0) > 0;
+            if !has_first {
+                if let Some(obj) = p.as_object_mut() {
+                    obj.insert("first_qty".into(), json!(quantity));
+                }
+                write_json_atomic(dir, "products", &Value::Array(list.clone()), true)?;
+                updated_products = Some(list);
+            }
+        }
+    }
+    Ok(TxOutcome {
+        inventory,
+        new_logs,
+        products: updated_products,
+    })
 }
 
 /// 若有未完成的交易日誌就補完。回傳是否有補完任何交易。可重複執行（冪等）。
@@ -580,6 +617,7 @@ pub fn validate_master_write(dir: &Path, stem: &str, value: &Value) -> AppResult
             let mut ids = HashSet::new();
             let mut skus = HashSet::new();
             let mut barcodes = HashSet::new();
+            let mut names = HashSet::new();
             for it in items {
                 let id = str_field(it, "id").trim();
                 if id.is_empty() {
@@ -589,8 +627,12 @@ pub fn validate_master_write(dir: &Path, stem: &str, value: &Value) -> AppResult
                     return Err(AppError::invalid(format!("編號 {id} 重複")));
                 }
                 if is_product {
-                    if str_field(it, "name").trim().is_empty() {
+                    let name = str_field(it, "name").trim();
+                    if name.is_empty() {
                         return Err(AppError::invalid(format!("商品 {id} 缺少名稱")));
+                    }
+                    if !names.insert(name.to_lowercase()) {
+                        return Err(AppError::invalid(format!("品項「{name}」已存在")));
                     }
                     let sku = str_field(it, "sku").trim();
                     if !sku.is_empty() && !skus.insert(sku) {
@@ -784,7 +826,7 @@ mod tests {
     }
 
     #[test]
-    fn damage_requires_reason_and_note() {
+    fn damage_requires_reason() {
         let mut inv = vec![];
         run(inbound(10), &mut inv, &[]).unwrap();
         let mk = |r: &str, n: &str| TxRequest::Damage {
@@ -795,10 +837,27 @@ mod tests {
             note: n.into(),
         };
         assert!(run(mk("", "王小明"), &mut inv.clone(), &[]).is_err());
-        assert!(run(mk("搬運摔破", " "), &mut inv.clone(), &[]).is_err());
-        let logs = run(mk("搬運摔破", "王小明"), &mut inv, &[]).unwrap();
+        let logs = run(mk("道具受損", ""), &mut inv, &[]).unwrap();
         assert_eq!(logs[0].action_type, "DAMAGE");
         assert_eq!(qty_at(&inv, "PROD-001", "LOC-A-01-01"), 8);
+    }
+
+    #[test]
+    fn free_text_and_blank_storage_location() {
+        let mut inv = vec![];
+        let tx = |loc: &str| TxRequest::Inbound {
+            product_id: "PROD-001".into(),
+            location_id: loc.into(),
+            quantity: 3,
+            reason: None,
+            note: None,
+        };
+        run(tx(""), &mut inv, &[]).unwrap();
+        run(tx("後倉紙箱"), &mut inv, &[]).unwrap();
+        assert_eq!(qty_at(&inv, "PROD-001", ""), 3);
+        assert_eq!(qty_at(&inv, "PROD-001", "後倉紙箱"), 3);
+        assert!(run(tx(" 前後空白 "), &mut inv, &[]).is_err());
+        assert!(run(tx(&"長".repeat(51)), &mut inv, &[]).is_err());
     }
 
     #[test]
@@ -819,14 +878,18 @@ mod tests {
         write_json_atomic(&dir, "products", &Value::Array(p), true).unwrap();
         write_json_atomic(&dir, "locations", &Value::Array(l), true).unwrap();
 
-        run_transaction(&dir, &inbound(20)).unwrap();
+        let first = run_transaction(&dir, &inbound(20)).unwrap();
+        assert_eq!(first.products.unwrap()[0]["first_qty"], 20);
+        let second = run_transaction(&dir, &inbound(1)).unwrap();
+        assert!(second.products.is_none(), "第二次入庫不可覆寫首次數量");
+        run_transaction(&dir, &outbound(1)).unwrap();
         let err = run_transaction(&dir, &outbound(21)).unwrap_err();
         assert_eq!(err.code, "INSUFFICIENT_STOCK");
         // 失敗的交易不得寫入任何日誌
-        assert_eq!(read_array(&dir, "logs").unwrap().len(), 1);
+        assert_eq!(read_array(&dir, "logs").unwrap().len(), 3);
         run_transaction(&dir, &outbound(5)).unwrap();
         assert_eq!(read_inventory(&dir).unwrap()[0].quantity, 15);
-        assert_eq!(read_array(&dir, "logs").unwrap().len(), 2);
+        assert_eq!(read_array(&dir, "logs").unwrap().len(), 4);
         assert!(!file_path(&dir, PENDING_FILE).exists());
 
         // 模擬：日誌已寫入、庫存尚未寫入時斷電
@@ -845,7 +908,7 @@ mod tests {
         .unwrap();
         assert!(commit_pending(&dir).unwrap());
         assert_eq!(read_inventory(&dir).unwrap()[0].quantity, 12);
-        assert_eq!(read_array(&dir, "logs").unwrap().len(), 3, "日誌不可重複追加");
+        assert_eq!(read_array(&dir, "logs").unwrap().len(), 5, "日誌不可重複追加");
         assert!(!commit_pending(&dir).unwrap());
         let _ = read_json(&dir, "logs").unwrap();
     }

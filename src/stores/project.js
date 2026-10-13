@@ -2,13 +2,12 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api, ApiError } from '../api'
 import { useProductStore } from './products'
-import { useLocationStore } from './locations'
 import { useStockStore } from './stock'
 
 export const FILE_LABELS = {
   config: '專案設定 config.json',
-  products: '商品主檔 products.json',
-  locations: '庫位主檔 locations.json',
+  products: '品項清單 products.json',
+  locations: '存放地點 locations.json',
   inventory: '即時庫存 inventory.json',
   logs: '異動流水帳 logs.json',
 }
@@ -65,7 +64,6 @@ export const useProjectStore = defineStore('project', () => {
       issues.value = res.issues
       recovered.value = res.recovered
       useProductStore().items = res.data.products ?? []
-      useLocationStore().items = res.data.locations ?? []
       const stock = useStockStore()
       stock.inventory = res.data.inventory ?? []
       stock.logs = res.data.logs ?? []

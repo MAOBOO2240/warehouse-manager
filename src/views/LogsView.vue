@@ -2,14 +2,12 @@
 import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ActionBadge from '../components/ActionBadge.vue'
-import { useProductStore } from '../stores/products'
 import { useStockStore } from '../stores/stock'
 import { useUiStore } from '../stores/ui'
 import { useProjectStore } from '../stores/project'
-import { ACTIONS, actionLabel, fmtDelta, fmtInt, fmtTime, localDate, todayStamp } from '../utils/format'
+import { ACTIONS, ACTIVE_ACTIONS, actionLabel, fmtDelta, fmtInt, fmtTime, localDate, locLabel, todayStamp } from '../utils/format'
 import { saveCsv } from '../utils/csv'
 
-const products = useProductStore()
 const stock = useStockStore()
 const ui = useUiStore()
 const project = useProjectStore()
@@ -21,7 +19,7 @@ const from = ref('')
 const to = ref('')
 const q = ref('')
 
-// 篩選：操作類型、起訖日期（本機日期）、商品名稱 / 條碼 / SKU / 編號
+// 篩選：操作類型、起訖日期（本機日期）、品項名稱 / 存放地點 / 原因 / 備註
 const filtered = computed(() => {
   const k = q.value.trim().toLowerCase()
   return stock.logs
@@ -31,8 +29,7 @@ const filtered = computed(() => {
       if (from.value && d < from.value) return false
       if (to.value && d > to.value) return false
       if (k) {
-        const p = products.get(l.product_id)
-        const hay = [l.product_name, l.product_id, p?.barcode, p?.sku, l.location_id, l.note, l.reason]
+        const hay = [l.product_name, l.location_id, l.note, l.reason]
         if (!hay.some((v) => String(v ?? '').toLowerCase().includes(k))) return false
       }
       return true
@@ -53,10 +50,10 @@ async function exportCsv() {
     const range = from.value || to.value ? `_${from.value || '起'}至${to.value || '今'}` : ''
     const path = await saveCsv(
       `${project.current}_異動流水帳${range}_${todayStamp()}.csv`,
-      ['流水號', '時間', '類型', '商品編號', '商品名稱', '庫位', '異動數量', '異動後結存', '原因', '備註'],
+      ['流水號', '時間', '類型', '品項', '存放地點', '異動數量', '異動後結存', '原因', '備註'],
       [...filtered.value].reverse().map((l) => [
-        l.id, fmtTime(l.timestamp), actionLabel(l.action_type), l.product_id, l.product_name,
-        l.location_id, l.delta, l.balance_after, l.reason, l.note,
+        l.id, fmtTime(l.timestamp), actionLabel(l.action_type), l.product_name,
+        locLabel(l.location_id), l.delta, l.balance_after, l.reason, l.note,
       ]),
     )
     if (path) ui.ok(`已匯出 ${filtered.value.length} 筆流水帳：\n${path}`)
@@ -76,7 +73,7 @@ async function exportCsv() {
       <label class="field-label" for="lg-type">操作類型</label>
       <select id="lg-type" v-model="type" class="field w-36">
         <option value="">全部</option>
-        <option v-for="(info, key) in ACTIONS" :key="key" :value="key">{{ info.label }}</option>
+        <option v-for="key in ACTIVE_ACTIONS" :key="key" :value="key">{{ ACTIONS[key].label }}</option>
       </select>
     </div>
     <div>
@@ -88,8 +85,8 @@ async function exportCsv() {
       <input id="lg-to" v-model="to" type="date" class="field num w-40" />
     </div>
     <div class="min-w-64 flex-1">
-      <label class="field-label" for="lg-q">商品名稱或條碼</label>
-      <input id="lg-q" v-model="q" class="scan-field py-2 text-[15px]" placeholder="輸入或掃描" />
+      <label class="field-label" for="lg-q">品項或存放地點</label>
+      <input id="lg-q" v-model="q" class="field" placeholder="輸入關鍵字" />
     </div>
     <button type="button" class="btn-ghost" @click="reset">清除條件</button>
   </div>
@@ -101,8 +98,8 @@ async function exportCsv() {
           <tr>
             <th>時間</th>
             <th>類型</th>
-            <th>商品</th>
-            <th>庫位</th>
+            <th>品項</th>
+            <th>存放地點</th>
             <th class="text-right">異動</th>
             <th class="text-right">結存</th>
             <th>原因</th>
@@ -115,7 +112,7 @@ async function exportCsv() {
             <td class="num whitespace-nowrap">{{ fmtTime(l.timestamp) }}</td>
             <td><ActionBadge :type="l.action_type" /></td>
             <td>{{ l.product_name }}</td>
-            <td class="num">{{ l.location_id }}</td>
+            <td :class="l.location_id ? '' : 'italic text-mute'">{{ locLabel(l.location_id) }}</td>
             <td class="num text-right text-[15px]" :class="l.delta < 0 ? 'text-signal' : 'text-go'">{{ fmtDelta(l.delta) }}</td>
             <td class="num text-right">{{ fmtInt(l.balance_after) }}</td>
             <td class="max-w-56 truncate" :title="l.reason">{{ l.reason }}</td>

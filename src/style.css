@@ -2,7 +2,9 @@
 
 /*
   視覺語彙取自倉庫現場：鋼灰貨架、白色作業面板、地面安全黃標線。
-  黃色只用在「目前所在位置」與「掃描輸入焦點」，紅色只用在阻擋與損耗。
+  黃色只用在「目前所在位置」，紅色只用在阻擋與損壞。
+  所有圓角使用 G2 連續曲率（squircle）：corner-shape: squircle 讓曲率從直線平滑過渡，
+  不會在直線與圓弧交接處出現曲率跳變。
   數字與代碼使用 Windows 內建的 Bahnschrift（DIN 風格），方便在貨架旁快速判讀。
 */
 @theme {
@@ -22,11 +24,25 @@
   --color-steel: #2f6690;
   --color-steel-soft: #e5eef5;
 
+  /* squircle 的視覺圓角比同半徑的圓弧小，半徑因此放大 */
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 28px;
+
   --font-sans: "Microsoft JhengHei UI", "Microsoft JhengHei", "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
   --font-num: "Bahnschrift", "DIN Alternate", "Roboto Condensed", "Microsoft JhengHei UI", sans-serif;
 }
 
 @layer base {
+  /* G2 連續曲率圓角（Chromium / WebView2 139 以上；較舊版本自動退回一般圓角） */
+  *,
+  *::before,
+  *::after {
+    corner-shape: squircle;
+  }
   html,
   body,
   #app {
@@ -56,19 +72,15 @@
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45;
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45;
 }
 
 @layer components {
   .field {
-    @apply w-full rounded-md border border-line bg-white px-3 py-2 text-[15px] text-ink outline-none transition-colors placeholder:text-mute/60 focus:border-steel focus:ring-2 focus:ring-steel/20 disabled:bg-surface disabled:text-mute;
+    @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-[15px] text-ink outline-none transition-colors placeholder:text-mute/60 focus:border-steel focus:ring-2 focus:ring-steel/20 disabled:bg-surface disabled:text-mute;
   }
   .field-label {
     @apply mb-1.5 block text-[13px] font-semibold text-ink-3;
-  }
-  /* 掃描輸入框：聚焦時以安全黃標示「掃描槍會打進這裡」 */
-  .scan-field {
-    @apply w-full rounded-md border-2 border-line bg-white px-3 py-2.5 font-num text-lg tracking-wide text-ink outline-none transition-colors placeholder:font-sans placeholder:text-[15px] placeholder:tracking-normal placeholder:text-mute/60 focus:border-safety focus:bg-safety-soft/40;
   }
   .btn-primary {
     @apply btn bg-ink text-white hover:bg-ink-2;
@@ -86,7 +98,7 @@
     @apply px-2.5 py-1 text-[13px];
   }
   .panel {
-    @apply rounded-lg border border-line bg-panel;
+    @apply rounded-xl border border-line bg-panel;
   }
   .num {
     font-family: var(--font-num);

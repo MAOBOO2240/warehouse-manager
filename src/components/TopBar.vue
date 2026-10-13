@@ -78,7 +78,7 @@ async function exportZip() {
     <button
       v-if="project.readOnly"
       type="button"
-      class="ml-2 rounded-md bg-signal-soft px-3 py-1.5 text-[13px] font-semibold text-signal"
+      class="ml-2 rounded-lg bg-signal-soft px-3 py-1.5 text-[13px] font-semibold text-signal"
       @click="emit('show-issues')"
     >
       資料檔異常・唯讀模式

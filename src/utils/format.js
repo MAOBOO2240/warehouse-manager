@@ -1,11 +1,11 @@
 export const ACTIONS = {
   INBOUND: { label: '入庫', tone: 'go' },
-  OUTBOUND: { label: '出庫', tone: 'steel' },
+  OUTBOUND: { label: '出貨', tone: 'steel' },
   TRANSFER: { label: '調撥', tone: 'mute' },
   ADJUST_PROFIT: { label: '盤盈', tone: 'go' },
   ADJUST_LOSS: { label: '盤虧', tone: 'signal' },
   SCRAP: { label: '報廢', tone: 'signal' },
-  DAMAGE: { label: '物品損壞', tone: 'signal' },
+  DAMAGE: { label: '損壞', tone: 'signal' },
 }
 
 export const TONE_CLASS = {
@@ -13,6 +13,14 @@ export const TONE_CLASS = {
   steel: 'bg-steel-soft text-steel',
   mute: 'bg-surface text-ink-3',
   signal: 'bg-signal-soft text-signal',
+}
+
+/** 目前操作介面使用的異動類型（流水帳篩選用） */
+export const ACTIVE_ACTIONS = ['INBOUND', 'OUTBOUND', 'DAMAGE']
+
+/** 存放地點顯示文字；空白代表未指定 */
+export function locLabel(loc) {
+  return loc ? loc : '未指定'
 }
 
 export function actionLabel(type) {

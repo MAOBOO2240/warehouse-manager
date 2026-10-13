@@ -4,54 +4,73 @@ import PageHeader from '../components/PageHeader.vue'
 import ProductPicker from '../components/ProductPicker.vue'
 import QtyPreview from '../components/QtyPreview.vue'
 import { useProductStore } from '../stores/products'
-import { useLocationStore } from '../stores/locations'
 import { useStockStore } from '../stores/stock'
 import { useUiStore } from '../stores/ui'
 import { useProjectStore } from '../stores/project'
-import { fmtInt, parseQty } from '../utils/format'
+import { fmtInt, locLabel, parseQty } from '../utils/format'
 
 const products = useProductStore()
-const locations = useLocationStore()
 const stock = useStockStore()
 const ui = useUiStore()
 const project = useProjectStore()
 
-const productId = ref(ui.params.productId || '')
-const locationId = ref('')
+const selected = ref(null)
+const location = ref('')
 const qtyText = ref('')
-const reason = ref('進貨入庫')
 const note = ref('')
 const busy = ref(false)
 const picker = ref(null)
 const qtyInput = ref(null)
 
-const product = computed(() => products.get(productId.value))
 const qty = computed(() => parseQty(qtyText.value))
-const before = computed(() => (productId.value && locationId.value ? stock.qty(productId.value, locationId.value) : 0))
-const canSubmit = computed(() => !busy.value && !project.readOnly && product.value && locationId.value && qty.value)
+const loc = computed(() => location.value.trim())
+const productId = computed(() => (selected.value && !selected.value.isNew ? selected.value.id : ''))
+const before = computed(() => (productId.value ? stock.qty(productId.value, loc.value) : 0))
+const locTooLong = computed(() => loc.value.length > 50)
+const canSubmit = computed(() => !busy.value && !project.readOnly && selected.value && qty.value && !locTooLong.value)
 
-// 選好商品後：若該商品已有存放庫位，預設帶入最多的那一格，游標跳到數量
-async function onPicked(p) {
-  const rows = stock.rowsOfProduct(p.id)
-  if (rows.length) locationId.value = rows[0].location_id
+async function onSelect(sel) {
+  selected.value = sel
+  if (!sel.isNew) {
+    const p = products.get(sel.id)
+    // 自動帶入第一次入庫的數量
+    qtyText.value = p?.first_qty > 0 ? String(p.first_qty) : ''
+    const rows = stock.rowsOfProduct(sel.id)
+    if (rows.length && !location.value) location.value = rows[0].location_id
+  } else {
+    qtyText.value = ''
+  }
   await nextTick()
   qtyInput.value?.focus()
+  qtyInput.value?.select()
+}
+
+function onClear() {
+  selected.value = null
+  qtyText.value = ''
 }
 
 async function submit() {
   if (!canSubmit.value) return
   busy.value = true
   try {
+    let id = selected.value.id
+    let name = selected.value.name
+    if (selected.value.isNew) {
+      const created = await products.create(name)
+      id = created.id
+      name = created.name
+    }
     await stock.apply({
       kind: 'INBOUND',
-      product_id: productId.value,
-      location_id: locationId.value,
+      product_id: id,
+      location_id: loc.value,
       quantity: qty.value,
-      reason: reason.value,
+      reason: '入庫',
       note: note.value,
     })
-    ui.ok(`已入庫：${product.value.name} ${fmtInt(qty.value)} ${product.value.unit || '件'} → ${locationId.value}`)
-    productId.value = ''
+    ui.ok(`已入庫：${name} ${fmtInt(qty.value)} 件（${locLabel(loc.value)}）`)
+    selected.value = null
     qtyText.value = ''
     note.value = ''
     await nextTick()
@@ -63,53 +82,45 @@ async function submit() {
   }
 }
 
-onMounted(async () => {
-  if (productId.value && product.value) await onPicked(product.value)
-  else picker.value?.focus()
-})
+onMounted(() => picker.value?.focus())
 </script>
 
 <template>
-  <PageHeader title="入庫作業" hint="掃描商品條碼 → 選擇入庫庫位 → 輸入數量後按 Enter 送出" />
-
-  <div v-if="!locations.items.length" class="panel mb-4 border-safety bg-safety-soft px-5 py-3 text-[14px]">
-    尚未建立庫位，請先到
-    <button type="button" class="font-semibold underline" @click="ui.go('locations')">庫位主檔</button>
-    新增至少一個庫位。
-  </div>
+  <PageHeader title="入庫" hint="選擇品項或輸入新品項名稱 → 確認數量 → 按 Enter 或「確認入庫」" />
 
   <div class="grid max-w-5xl grid-cols-5 gap-6">
-    <form class="panel col-span-3 space-y-4 p-5" @submit.prevent="submit">
-      <ProductPicker ref="picker" v-model="productId" @picked="onPicked" />
+    <form class="panel col-span-3 space-y-5 p-6" @submit.prevent="submit">
+      <ProductPicker ref="picker" :selected="selected" allow-create @select="onSelect" @clear="onClear" />
 
       <div>
-        <label class="field-label" for="in-loc">入庫庫位</label>
-        <select id="in-loc" v-model="locationId" class="field num">
-          <option value="" disabled>請選擇庫位</option>
-          <option v-for="l in locations.sorted" :key="l.id" :value="l.id">{{ locations.label(l.id) }}</option>
-        </select>
+        <label class="field-label" for="in-loc">存放地點 <span class="font-normal text-mute">（可不填）</span></label>
+        <input
+          id="in-loc"
+          v-model="location"
+          class="field"
+          list="in-locs"
+          maxlength="50"
+          placeholder="例如：後倉第二排、A 櫃"
+          autocomplete="off"
+        />
+        <datalist id="in-locs">
+          <option v-for="l in stock.knownLocations" :key="l" :value="l" />
+        </datalist>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="field-label" for="in-qty">入庫數量</label>
+          <label class="field-label" for="in-qty">數量</label>
           <input id="in-qty" ref="qtyInput" v-model="qtyText" class="field num text-lg" inputmode="numeric" placeholder="0" />
           <p v-if="qtyText && !qty" class="mt-1 text-[12.5px] text-signal">請輸入大於 0 的整數</p>
+          <p v-else-if="productId && products.get(productId)?.first_qty > 0" class="mt-1 text-[12.5px] text-mute">
+            已帶入第一次入庫的數量
+          </p>
         </div>
         <div>
-          <label class="field-label" for="in-reason">入庫原因</label>
-          <input id="in-reason" v-model="reason" class="field" list="in-reasons" />
-          <datalist id="in-reasons">
-            <option value="進貨入庫" />
-            <option value="門市退回" />
-            <option value="其他入庫" />
-          </datalist>
+          <label class="field-label" for="in-note">備註</label>
+          <input id="in-note" v-model="note" class="field" placeholder="可不填" />
         </div>
-      </div>
-
-      <div>
-        <label class="field-label" for="in-note">採購備註</label>
-        <input id="in-note" v-model="note" class="field" placeholder="例如：進貨單號、供應商" />
       </div>
 
       <button type="submit" class="btn-go w-full py-3 text-[15px]" :disabled="!canSubmit">確認入庫</button>
@@ -117,20 +128,27 @@ onMounted(async () => {
 
     <aside class="col-span-2 space-y-4">
       <QtyPreview
-        v-if="product && locationId"
+        v-if="selected"
         :before="before"
         :after="qty ? before + qty : null"
-        :unit="product.unit"
+        :caption="`${locLabel(loc)} 現有`"
+        unit="件"
       />
-      <div v-if="product" class="panel p-4">
-        <h3 class="mb-2 text-[13px] font-semibold text-mute">此商品目前存放位置</h3>
-        <ul v-if="stock.rowsOfProduct(product.id).length" class="space-y-1.5">
-          <li v-for="r in stock.rowsOfProduct(product.id)" :key="r.location_id" class="flex justify-between">
-            <span class="num">{{ r.location_id }}</span>
-            <span class="num">{{ fmtInt(r.quantity) }}</span>
+      <div v-if="productId" class="panel p-4">
+        <h3 class="mb-2 text-[13px] font-semibold text-mute">此品項目前存放位置</h3>
+        <ul v-if="stock.rowsOfProduct(productId).length" class="space-y-1.5">
+          <li v-for="r in stock.rowsOfProduct(productId)" :key="r.location_id">
+            <button
+              type="button"
+              class="flex w-full justify-between rounded-lg px-2 py-1 text-left hover:bg-surface"
+              @click="location = r.location_id"
+            >
+              <span>{{ locLabel(r.location_id) }}</span>
+              <span class="num">{{ fmtInt(r.quantity) }}</span>
+            </button>
           </li>
         </ul>
-        <p v-else class="text-[13px] text-mute">尚未存放在任何庫位</p>
+        <p v-else class="text-[13px] text-mute">目前沒有庫存</p>
       </div>
     </aside>
   </div>

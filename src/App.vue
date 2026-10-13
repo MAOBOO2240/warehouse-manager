@@ -5,13 +5,8 @@ import TopBar from './components/TopBar.vue'
 import ToastHost from './components/ToastHost.vue'
 import IssuesDialog from './components/IssuesDialog.vue'
 import DashboardView from './views/DashboardView.vue'
-import ProductsView from './views/ProductsView.vue'
-import LocationsView from './views/LocationsView.vue'
 import InboundView from './views/InboundView.vue'
 import OutboundView from './views/OutboundView.vue'
-import TransferView from './views/TransferView.vue'
-import StocktakeView from './views/StocktakeView.vue'
-import LossView from './views/LossView.vue'
 import InventoryView from './views/InventoryView.vue'
 import LogsView from './views/LogsView.vue'
 import { useProjectStore } from './stores/project'
@@ -22,13 +17,8 @@ const ui = useUiStore()
 
 const views = {
   dashboard: DashboardView,
-  products: ProductsView,
-  locations: LocationsView,
   inbound: InboundView,
   outbound: OutboundView,
-  transfer: TransferView,
-  stocktake: StocktakeView,
-  loss: LossView,
   inventory: InventoryView,
   logs: LogsView,
 }

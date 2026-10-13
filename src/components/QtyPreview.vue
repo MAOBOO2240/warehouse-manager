@@ -6,13 +6,13 @@ defineProps({
   before: { type: Number, default: 0 },
   after: { type: Number, default: null },
   unit: { type: String, default: '' },
-  caption: { type: String, default: '此庫位現量' },
+  caption: { type: String, default: '現有' },
   danger: { type: Boolean, default: false },
 })
 </script>
 
 <template>
-  <div class="flex items-end gap-3 rounded-md border border-line bg-surface/70 px-4 py-3">
+  <div class="flex items-end gap-3 rounded-lg border border-line bg-surface/70 px-4 py-3">
     <div>
       <div class="text-[12px] text-mute">{{ caption }}</div>
       <div class="num text-3xl leading-none">{{ fmtInt(before) }}</div>

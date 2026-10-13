@@ -8,7 +8,7 @@ const ui = useUiStore()
     <div
       v-for="t in ui.toasts"
       :key="t.id"
-      class="pointer-events-auto rounded-md border-l-4 bg-white px-4 py-3 text-[14px] shadow-lg whitespace-pre-line"
+      class="pointer-events-auto rounded-lg border-l-4 bg-white px-4 py-3 text-[14px] shadow-lg whitespace-pre-line"
       :class="t.type === 'error' ? 'border-signal text-signal' : 'border-go text-ink'"
     >
       {{ t.text }}
