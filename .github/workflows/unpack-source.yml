@@ -1,4 +1,4 @@
-# 上傳 source.tar.xz 到儲存庫根目錄後：自動解壓成一般檔案並提交，接著編譯 EXE
+# 上傳 source.tar.xz 到儲存庫根目錄後：清除舊原始碼、解壓成一般檔案並提交，接著編譯 EXE
 name: Unpack source
 
 on:
@@ -18,6 +18,7 @@ jobs:
       - name: 解壓並提交
         run: |
           tar -xJf source.tar.xz
+          rm -rf src src-tauri/src scripts
           cp -a WarehouseManager/. .
           rm -rf WarehouseManager source.tar.xz
           git config user.name "github-actions[bot]"
