@@ -1,0 +1,25 @@
+[package]
+name = "warehouse-manager"
+version = "1.0.0"
+description = "零售倉儲管理系統（單機離線版）"
+edition = "2021"
+rust-version = "1.77.2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
+
+# Release 最小體積設定
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

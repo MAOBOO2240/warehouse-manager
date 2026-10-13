@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "主視窗使用的基本權限",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

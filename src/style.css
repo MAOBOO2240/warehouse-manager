@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/*
+  視覺語彙取自倉庫現場：鋼灰貨架、白色作業面板、地面安全黃標線。
+  黃色只用在「目前所在位置」與「掃描輸入焦點」，紅色只用在阻擋與損耗。
+  數字與代碼使用 Windows 內建的 Bahnschrift（DIN 風格），方便在貨架旁快速判讀。
+*/
+@theme {
+  --color-ink: #1d2a33;
+  --color-ink-2: #2b3b46;
+  --color-ink-3: #3c4f5c;
+  --color-surface: #eef1f4;
+  --color-panel: #ffffff;
+  --color-line: #d3dae0;
+  --color-mute: #5d6c78;
+  --color-safety: #f2b705;
+  --color-safety-soft: #fff4cc;
+  --color-signal: #c4302b;
+  --color-signal-soft: #fdecea;
+  --color-go: #2c7a4b;
+  --color-go-soft: #e6f3eb;
+  --color-steel: #2f6690;
+  --color-steel-soft: #e5eef5;
+
+  --font-sans: "Microsoft JhengHei UI", "Microsoft JhengHei", "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
+  --font-num: "Bahnschrift", "DIN Alternate", "Roboto Condensed", "Microsoft JhengHei UI", sans-serif;
+}
+
+@layer base {
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
+  body {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+  input,
+  textarea,
+  td,
+  .selectable {
+    user-select: text;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-steel);
+    outline-offset: 2px;
+  }
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+  }
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45;
+}
+
+@layer components {
+  .field {
+    @apply w-full rounded-md border border-line bg-white px-3 py-2 text-[15px] text-ink outline-none transition-colors placeholder:text-mute/60 focus:border-steel focus:ring-2 focus:ring-steel/20 disabled:bg-surface disabled:text-mute;
+  }
+  .field-label {
+    @apply mb-1.5 block text-[13px] font-semibold text-ink-3;
+  }
+  /* 掃描輸入框：聚焦時以安全黃標示「掃描槍會打進這裡」 */
+  .scan-field {
+    @apply w-full rounded-md border-2 border-line bg-white px-3 py-2.5 font-num text-lg tracking-wide text-ink outline-none transition-colors placeholder:font-sans placeholder:text-[15px] placeholder:tracking-normal placeholder:text-mute/60 focus:border-safety focus:bg-safety-soft/40;
+  }
+  .btn-primary {
+    @apply btn bg-ink text-white hover:bg-ink-2;
+  }
+  .btn-go {
+    @apply btn bg-go text-white hover:brightness-110;
+  }
+  .btn-danger {
+    @apply btn bg-signal text-white hover:brightness-110;
+  }
+  .btn-ghost {
+    @apply btn border border-line bg-white text-ink hover:bg-surface;
+  }
+  .btn-sm {
+    @apply px-2.5 py-1 text-[13px];
+  }
+  .panel {
+    @apply rounded-lg border border-line bg-panel;
+  }
+  .num {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+  }
+  .table-base {
+    @apply w-full border-collapse text-left text-[13.5px];
+  }
+  .table-base th {
+    @apply sticky top-0 z-10 border-b border-line bg-surface px-3 py-2 text-[12.5px] font-semibold whitespace-nowrap text-mute;
+  }
+  .table-base td {
+    @apply border-b border-line/70 px-3 py-2 align-middle;
+  }
+  .table-base tbody tr:hover td {
+    @apply bg-steel-soft/50;
+  }
+}
