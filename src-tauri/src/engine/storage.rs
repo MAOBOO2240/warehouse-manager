@@ -533,7 +533,7 @@ mod tests {
             zw.start_file("預設總倉/products.json", o()).unwrap();
             zw.write_all(br#"[{"id":"PROD-001","name":"a"}]"#).unwrap();
             zw.start_file("預設總倉/config.json", o()).unwrap();
-            zw.write_all(br#"{"name":"預設總倉","schema_version":1}"#).unwrap();
+            zw.write_all(r#"{"name":"預設總倉","schema_version":1}"#.as_bytes()).unwrap();
             zw.start_file("預設總倉/backups/products.json.20260101_000000.bak", o()).unwrap();
             zw.write_all(b"[]").unwrap();
             zw.start_file("預設總倉/../evil.json", o()).unwrap();
