@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ProductPicker from '../components/ProductPicker.vue'
 import ComboField from '../components/ComboField.vue'
+import QtyHint from '../components/QtyHint.vue'
 import QtyPreview from '../components/QtyPreview.vue'
 import { useProductStore } from '../stores/products'
 import { useStockStore } from '../stores/stock'
@@ -101,11 +102,12 @@ async function submit() {
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="field-label" for="in-qty">數量</label>
-          <input id="in-qty" ref="qtyInput" v-model="qtyText" class="field num text-lg" inputmode="numeric" placeholder="0" />
-          <p v-if="qtyText && !qty" class="mt-1 text-[12.5px] text-signal">請輸入大於 0 的整數</p>
-          <p v-else-if="productId && products.get(productId)?.first_qty > 0" class="mt-1 text-[12.5px] text-mute">
-            已帶入第一次入庫的數量
-          </p>
+          <input id="in-qty" ref="qtyInput" v-model="qtyText" class="field num text-lg" placeholder="可輸入算式，如 12*5" />
+          <QtyHint :text="qtyText" class="mt-1 pl-1">
+            <template v-if="productId && products.get(productId)?.first_qty > 0" #default>
+              <p class="text-[12.5px] text-mute">已帶入第一次入庫的數量</p>
+            </template>
+          </QtyHint>
         </div>
         <div>
           <label class="field-label" for="in-note">備註</label>

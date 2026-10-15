@@ -351,13 +351,13 @@ async function exportCsv() {
   </div>
 
   <div v-else ref="scroller" class="panel overflow-x-auto">
-    <table ref="tableEl" class="table-base table-fixed text-[16px]" :class="allLocs ? 'min-w-[1120px]' : 'min-w-[980px]'">
+    <table ref="tableEl" class="table-base min-w-[980px] table-fixed text-[16px]">
       <colgroup>
         <col class="w-12" />
         <col />
-        <col v-if="allLocs" class="w-[17%]" />
+        <col v-if="allLocs" class="w-[140px]" />
         <col class="w-[110px]" />
-        <col class="w-[20%]" />
+        <col :class="allLocs ? 'w-[16%]' : 'w-[20%]'" />
         <col class="w-[150px]" />
         <col class="w-[230px]" />
       </colgroup>
@@ -390,20 +390,17 @@ async function exportCsv() {
             </button>
           </td>
           <td class="py-5">
-            <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-              <span class="text-[16.5px] font-semibold break-all">{{ r.name }}</span>
+            <div class="flex min-w-0 items-center gap-2.5">
+              <span class="min-w-0 text-[16.5px] leading-snug font-semibold break-all" :title="r.name">{{ r.name }}</span>
               <button
                 type="button"
-                class="flex h-7 items-center gap-1 rounded-full bg-raised px-2.5 text-[12.5px] font-semibold text-accent hover:bg-accent-soft"
-                title="把部分數量移到新的存放地點"
+                class="h-7 shrink-0 rounded-full bg-raised px-3 text-[12.5px] font-semibold whitespace-nowrap text-accent hover:bg-accent-soft"
+                :title="r.location_id ? '把部分數量移到其他存放地點' : '把部分數量放到指定的存放地點'"
                 @click="openTx('move', r)"
-              >
-                <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                新增地點
-              </button>
+              >{{ r.location_id ? '改變地點' : '新增地點' }}</button>
             </div>
           </td>
-          <td v-if="allLocs" class="py-5 text-[15px] break-all" :class="r.location_id ? '' : 'italic text-mute'">{{ locLabel(r.location_id) }}</td>
+          <td v-if="allLocs" class="truncate py-5 text-[15px]" :class="r.location_id ? '' : 'italic text-mute'" :title="locLabel(r.location_id)">{{ locLabel(r.location_id) }}</td>
           <td class="num py-5 text-right text-[22px]">{{ fmtInt(r.quantity) }}</td>
           <td class="py-5">
             <input

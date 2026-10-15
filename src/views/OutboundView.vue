@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
+import QtyHint from '../components/QtyHint.vue'
 import ProductPicker from '../components/ProductPicker.vue'
 import QtyPreview from '../components/QtyPreview.vue'
 import { useProductStore } from '../stores/products'
@@ -179,10 +180,9 @@ async function submit() {
             v-model="qtyText"
             class="field num text-lg"
             :class="insufficient ? 'border-signal/70 bg-signal-soft focus:border-signal focus:ring-signal/20' : ''"
-            inputmode="numeric"
-            placeholder="0"
+            placeholder="可輸入算式，如 12*5"
           />
-          <p v-if="qtyText && !qty" class="mt-1 text-[12.5px] text-signal">請輸入大於 0 的整數</p>
+          <QtyHint :text="qtyText" class="mt-1 pl-1" />
         </div>
         <div>
           <label class="field-label" for="out-note">備註</label>

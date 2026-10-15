@@ -120,7 +120,6 @@ onBeforeUnmount(() => {
   <nav class="flex w-56 shrink-0 flex-col bg-nav px-3 pt-5 pb-3">
     <div class="px-3 pb-4">
       <div class="text-[17px] font-bold tracking-wide text-ink">倉儲管理系統</div>
-      <div class="mt-0.5 text-[12px] text-mute">單機離線版</div>
     </div>
 
     <div class="flex-1 overflow-auto">
@@ -154,7 +153,7 @@ onBeforeUnmount(() => {
               {{ item.label }}
             </button>
             <!-- 庫存清單：存放地點子選單 -->
-            <div v-if="item.id === 'inventory' && locations.length" class="nav-sub" :style="toneStyle(item.tone)" role="group" aria-label="存放地點">
+            <div v-if="item.id === 'inventory' && ui.page === 'inventory' && locations.length" class="nav-sub" :style="toneStyle(item.tone)" role="group" aria-label="存放地點">
               <button
                 type="button"
                 class="nav-sub-item"

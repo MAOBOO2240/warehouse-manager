@@ -1,3 +1,5 @@
+import { analyzeQty } from './calc'
+
 export const ACTIONS = {
   INBOUND: { label: '入庫', tone: 'go' },
   OUTBOUND: { label: '出貨', tone: 'steel' },
@@ -61,12 +63,9 @@ export function fmtDelta(n) {
   return n > 0 ? `+${fmtInt(n)}` : fmtInt(n)
 }
 
-/** 解析正整數；不合法回傳 null */
+/** 解析數量（正整數，可輸入算式如 12*5+3）；不合法回傳 null */
 export function parseQty(v) {
-  const s = String(v ?? '').trim()
-  if (!/^\d+$/.test(s)) return null
-  const n = Number(s)
-  return n > 0 && n <= 1_000_000_000 ? n : null
+  return analyzeQty(v).qty
 }
 
 /** 解析 0 以上整數（盤點用）；空白回傳 null */

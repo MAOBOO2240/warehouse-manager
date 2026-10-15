@@ -3,6 +3,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import ModalDialog from './ModalDialog.vue'
 import ComboField from './ComboField.vue'
+import QtyHint from './QtyHint.vue'
 import { useProductStore } from '../stores/products'
 import { useStockStore } from '../stores/stock'
 import { useUiStore } from '../stores/ui'
@@ -27,6 +28,8 @@ const MODES = {
 const DAMAGE_REASONS = ['道具受損', '印刷錯誤', '其他']
 
 const cfg = computed(() => MODES[props.mode])
+// 移動地點：原本有地點時叫「改變地點」，未指定時叫「新增地點」（與庫存清單按鈕一致）
+const dialogTitle = computed(() => (props.mode === 'move' ? (props.row.location_id ? '改變地點' : '新增地點') : cfg.value.title))
 const product = computed(() => products.get(props.row.product_id))
 const available = computed(() => stock.qty(props.row.product_id, props.row.location_id))
 
@@ -108,7 +111,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ModalDialog :title="cfg.title" :subtitle="row.name" :tone="cfg.tone" @close="emit('close')">
+  <ModalDialog :title="dialogTitle" :subtitle="row.name" :tone="cfg.tone" @close="emit('close')">
     <template #icon>
       <svg v-if="mode === 'in'" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10M7.5 9.5 12 14l4.5-4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg>
       <svg v-else-if="mode === 'out'" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14V4M7.5 8.5 12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg>
@@ -166,8 +169,7 @@ onMounted(async () => {
             v-model="qtyText"
             class="field num text-lg"
             :class="insufficient ? 'border-signal/70 bg-signal-soft' : ''"
-            inputmode="numeric"
-            placeholder="0"
+            placeholder="可輸入算式，如 12*5"
           />
         </div>
         <div>
@@ -175,7 +177,7 @@ onMounted(async () => {
           <input id="qt-note" v-model="note" class="field" placeholder="可不填" />
         </div>
       </div>
-      <p v-if="qtyText && !qty" class="-mt-2 pl-1 text-[12.5px] text-signal">請輸入大於 0 的整數</p>
+      <QtyHint :text="qtyText" class="-mt-2 pl-1" />
       <div v-if="insufficient" class="rounded-2xl bg-signal-soft px-5 py-3 text-[14.5px] font-bold text-signal ring-2 ring-signal/50" role="alert">
         庫存不足！此存放地點剩餘 {{ fmtInt(available) }} 件，不可{{ cfg.verb }} {{ fmtInt(qty) }} 件
       </div>
