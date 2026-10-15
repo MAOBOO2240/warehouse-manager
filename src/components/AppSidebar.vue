@@ -82,6 +82,11 @@ const showSettings = ref(false)
 const confirmClear = ref(false)
 const clearing = ref(false)
 
+function openClearConfirm() {
+  confirmClear.value = true
+  showSettings.value = false
+}
+
 async function clearCache() {
   clearing.value = true
   try {
@@ -228,10 +233,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="pill w-full gap-2"
-          @click="
-            confirmClear = true
-            showSettings = false
-          "
+          @click="openClearConfirm"
         >
           <svg
             viewBox="0 0 24 24"
