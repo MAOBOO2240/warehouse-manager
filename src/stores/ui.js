@@ -40,6 +40,8 @@ export const useUiStore = defineStore('ui', () => {
   const params = ref({})
   // 庫存清單目前顯示的存放地點：null = 全部地點，'' = 未指定
   const invLoc = ref(null)
+  // 左側選單「庫存清單」底下的地點列表是否展開
+  const invListOpen = ref(true)
   const toasts = ref([])
   const settings = ref(loadSettings())
   let seq = 0
@@ -91,5 +93,5 @@ export const useUiStore = defineStore('ui', () => {
   const ok = (text) => toast(text, 'ok')
   const error = (err) => toast(typeof err === 'string' ? err : err?.message || String(err), 'error', 6000)
 
-  return { page, params, invLoc, toasts, settings, go, toast, ok, error, reloadAfterClear }
+  return { page, params, invLoc, invListOpen, toasts, settings, go, toast, ok, error, reloadAfterClear }
 })

@@ -351,7 +351,7 @@ async function exportCsv() {
   </div>
 
   <div v-else ref="scroller" class="panel overflow-x-auto">
-    <table ref="tableEl" class="table-base min-w-[980px] table-fixed text-[16px]">
+    <table ref="tableEl" class="table-base min-w-[1060px] table-fixed text-[16px]">
       <colgroup>
         <col class="w-12" />
         <col />
@@ -359,7 +359,7 @@ async function exportCsv() {
         <col class="w-[110px]" />
         <col :class="allLocs ? 'w-[16%]' : 'w-[20%]'" />
         <col class="w-[150px]" />
-        <col class="w-[230px]" />
+        <col class="w-[330px]" />
       </colgroup>
       <thead class="cursor-grab" title="按住表頭左右拖曳可移動顯示範圍" @mousedown="onHeadDown">
         <tr>
@@ -390,15 +390,7 @@ async function exportCsv() {
             </button>
           </td>
           <td class="py-5">
-            <div class="flex min-w-0 items-center gap-2.5">
-              <span class="min-w-0 text-[16.5px] leading-snug font-semibold break-all" :title="r.name">{{ r.name }}</span>
-              <button
-                type="button"
-                class="h-7 shrink-0 rounded-full bg-raised px-3 text-[12.5px] font-semibold whitespace-nowrap text-accent hover:bg-accent-soft"
-                :title="r.location_id ? '把部分數量移到其他存放地點' : '把部分數量放到指定的存放地點'"
-                @click="openTx('move', r)"
-              >{{ r.location_id ? '改變地點' : '新增地點' }}</button>
-            </div>
+            <span class="text-[16.5px] leading-snug font-semibold break-all">{{ r.name }}</span>
           </td>
           <td v-if="allLocs" class="truncate py-5 text-[15px]" :class="r.location_id ? '' : 'italic text-mute'" :title="locLabel(r.location_id)">{{ locLabel(r.location_id) }}</td>
           <td class="num py-5 text-right text-[22px]">{{ fmtInt(r.quantity) }}</td>
@@ -429,6 +421,12 @@ async function exportCsv() {
               <button type="button" class="btn-go btn-sm" @click="openTx('in', r)">入庫</button>
               <button type="button" class="btn-primary btn-sm" @click="openTx('out', r)">出庫</button>
               <button type="button" class="btn-danger btn-sm" @click="openTx('damage', r)">損壞</button>
+              <button
+                type="button"
+                class="btn-violet btn-sm"
+                :title="r.location_id ? '把部分數量移到其他存放地點' : '把部分數量放到指定的存放地點'"
+                @click="openTx('move', r)"
+              >{{ r.location_id ? '改變地點' : '新增地點' }}</button>
             </div>
           </td>
         </tr>

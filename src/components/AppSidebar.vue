@@ -22,7 +22,13 @@ const allCount = computed(() => locations.value.reduce((t, l) => t + l.count, 0)
 
 function openInventory(loc = null) {
   ui.invLoc = loc
+  ui.invListOpen = true
   ui.go('inventory')
+}
+// 點「庫存清單」：從其他頁面進來時展開地點列表；已在庫存清單時再點一次則收起／展開
+function clickInventory() {
+  if (ui.page === 'inventory') ui.invListOpen = !ui.invListOpen
+  else openInventory()
 }
 const subActive = (loc) => ui.page === 'inventory' && ui.invLoc === loc
 
@@ -135,7 +141,7 @@ onBeforeUnmount(() => {
               :class="ui.page === item.id ? 'is-active' : ''"
               :style="toneStyle(item.tone)"
               :aria-current="ui.page === item.id ? 'page' : undefined"
-              @click="item.id === 'inventory' ? openInventory() : ui.go(item.id)"
+              @click="item.id === 'inventory' ? clickInventory() : ui.go(item.id)"
             >
               <span class="nav-icon" aria-hidden="true">
                 <svg
@@ -151,9 +157,23 @@ onBeforeUnmount(() => {
                 </svg>
               </span>
               {{ item.label }}
+              <svg
+                v-if="item.id === 'inventory' && ui.page === 'inventory' && locations.length"
+                viewBox="0 0 24 24"
+                class="ml-auto h-4 w-4 shrink-0 opacity-80 transition-transform"
+                :class="ui.invListOpen ? '' : '-rotate-90'"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
             </button>
             <!-- 庫存清單：存放地點子選單 -->
-            <div v-if="item.id === 'inventory' && ui.page === 'inventory' && locations.length" class="nav-sub" :style="toneStyle(item.tone)" role="group" aria-label="存放地點">
+            <div v-if="item.id === 'inventory' && ui.page === 'inventory' && ui.invListOpen && locations.length" class="nav-sub" :style="toneStyle(item.tone)" role="group" aria-label="存放地點">
               <button
                 type="button"
                 class="nav-sub-item"
