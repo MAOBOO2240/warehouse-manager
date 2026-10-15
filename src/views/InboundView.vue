@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ProductPicker from '../components/ProductPicker.vue'
+import ComboField from '../components/ComboField.vue'
 import QtyPreview from '../components/QtyPreview.vue'
 import { useProductStore } from '../stores/products'
 import { useStockStore } from '../stores/stock'
@@ -87,18 +88,14 @@ async function submit() {
 
       <div>
         <label class="field-label" for="in-loc">存放地點 <span class="font-normal text-mute">（可不填）</span></label>
-        <input
+        <ComboField
           id="in-loc"
           v-model="location"
-          class="field"
-          list="in-locs"
+          :suggestions="stock.knownLocations"
+          title="已使用過的存放地點"
           maxlength="50"
           placeholder="例如：後倉第二排、A 櫃"
-          autocomplete="off"
         />
-        <datalist id="in-locs">
-          <option v-for="l in stock.knownLocations" :key="l" :value="l" />
-        </datalist>
       </div>
 
       <div class="grid grid-cols-2 gap-4">

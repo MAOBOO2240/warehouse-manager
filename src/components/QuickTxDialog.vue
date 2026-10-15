@@ -2,6 +2,7 @@
 // 庫存清單列上的快速操作：入庫 / 出庫 / 損壞 / 移到新地點
 import { computed, nextTick, onMounted, ref } from 'vue'
 import ModalDialog from './ModalDialog.vue'
+import ComboField from './ComboField.vue'
 import { useProductStore } from '../stores/products'
 import { useStockStore } from '../stores/stock'
 import { useUiStore } from '../stores/ui'
@@ -128,19 +129,15 @@ onMounted(async () => {
 
       <div v-if="mode === 'move'">
         <label class="field-label" for="qt-target">新存放地點</label>
-        <input
+        <ComboField
           id="qt-target"
           ref="targetEl"
           v-model="target"
-          class="field"
-          list="qt-locs"
+          :suggestions="otherLocations"
+          title="已使用過的存放地點"
           maxlength="50"
           placeholder="輸入新地點，或選擇既有地點；留空代表「未指定」"
-          autocomplete="off"
         />
-        <datalist id="qt-locs">
-          <option v-for="l in otherLocations" :key="l" :value="l" />
-        </datalist>
         <p v-if="problem" class="mt-1.5 pl-1 text-[12.5px] text-signal">{{ problem }}</p>
       </div>
 

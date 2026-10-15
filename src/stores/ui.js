@@ -38,6 +38,8 @@ export const useUiStore = defineStore('ui', () => {
   const page = ref('dashboard')
   // 跳頁時帶過去的參數
   const params = ref({})
+  // 庫存清單目前顯示的存放地點：null = 全部地點，'' = 未指定
+  const invLoc = ref(null)
   const toasts = ref([])
   const settings = ref(loadSettings())
   let seq = 0
@@ -89,5 +91,5 @@ export const useUiStore = defineStore('ui', () => {
   const ok = (text) => toast(text, 'ok')
   const error = (err) => toast(typeof err === 'string' ? err : err?.message || String(err), 'error', 6000)
 
-  return { page, params, toasts, settings, go, toast, ok, error, reloadAfterClear }
+  return { page, params, invLoc, toasts, settings, go, toast, ok, error, reloadAfterClear }
 })

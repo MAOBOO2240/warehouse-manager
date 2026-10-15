@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ActionBadge from '../components/ActionBadge.vue'
 import DateField from '../components/DateField.vue'
+import SelectMenu from '../components/SelectMenu.vue'
 import { useStockStore } from '../stores/stock'
 import { useUiStore } from '../stores/ui'
 import { useProjectStore } from '../stores/project'
@@ -16,6 +17,7 @@ const project = useProjectStore()
 const DISPLAY_LIMIT = 500
 
 const type = ref('')
+const typeOptions = [{ value: '', label: '全部' }, ...ACTIVE_ACTIONS.map((key) => ({ value: key, label: ACTIONS[key].label }))]
 const from = ref('')
 const to = ref('')
 const q = ref('')
@@ -72,10 +74,7 @@ async function exportCsv() {
   <div class="panel mb-5 flex flex-wrap items-end gap-4 p-5">
     <div>
       <label class="field-label" for="lg-type">操作類型</label>
-      <select id="lg-type" v-model="type" class="field w-40 rounded-full">
-        <option value="">全部</option>
-        <option v-for="key in ACTIVE_ACTIONS" :key="key" :value="key">{{ ACTIONS[key].label }}</option>
-      </select>
+      <SelectMenu id="lg-type" v-model="type" :options="typeOptions" title="操作類型" class="w-44" />
     </div>
     <DateField id="lg-from" v-model="from" label="起始日期" class="w-56" />
     <DateField id="lg-to" v-model="to" label="結束日期" class="w-56" />

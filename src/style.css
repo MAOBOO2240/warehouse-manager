@@ -333,13 +333,6 @@ body.is-sorting * {
   .menu-trigger:disabled {
     opacity: 0.6;
   }
-  select.field {
-    background-color: var(--color-menu);
-  }
-  select option {
-    background-color: var(--color-menu);
-    color: var(--color-ink);
-  }
 
   /* ---- 左側工具列：每個項目各有顏色（--tone） ---- */
   .nav-item {
@@ -365,20 +358,39 @@ body.is-sorting * {
 }
 
 @layer components {
-  /* ---- 庫存清單：存放地點分區標題 ---- */
-  .loc-head {
-    background: linear-gradient(180deg, color-mix(in oklab, var(--color-violet) 14%, var(--color-panel)), color-mix(in oklab, var(--color-violet) 5%, var(--color-panel)));
-    border-bottom: 1px solid color-mix(in oklab, var(--color-violet) 22%, var(--color-line));
-    transition: filter 0.15s;
-  }
-  .loc-head:hover {
-    filter: brightness(1.06);
+  /* ---- 庫存清單：目前顯示的存放地點 ---- */
+  .loc-badge {
+    @apply flex max-w-72 shrink-0 items-center gap-2.5 rounded-full py-1 pr-4 pl-1 text-[17px] font-bold text-ink;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--color-violet) 16%, var(--color-panel)), color-mix(in oklab, var(--color-violet) 7%, var(--color-panel)));
+    border: 1.5px solid color-mix(in oklab, var(--color-violet) 30%, var(--color-line));
+    corner-shape: round;
   }
   .loc-pin {
     @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full;
     color: var(--color-violet);
     background: color-mix(in oklab, var(--color-violet) 18%, transparent);
     corner-shape: round;
+  }
+
+  /* ---- 側邊欄：庫存清單底下的存放地點 ---- */
+  .nav-sub {
+    @apply mt-1 mb-1.5 ml-[25px] space-y-0.5 pl-2.5;
+    border-left: 2px solid color-mix(in oklab, var(--tone) 35%, var(--color-line));
+  }
+  .nav-sub-item {
+    @apply flex w-full items-center gap-2 rounded-full py-[7px] pr-3 pl-3 text-left text-[13.5px] text-ink-2 transition-colors hover:bg-hover hover:text-ink;
+    corner-shape: round;
+  }
+  .nav-sub-item.is-active {
+    @apply font-semibold;
+    color: color-mix(in oklab, var(--tone) 70%, var(--color-ink));
+    background: color-mix(in oklab, var(--tone) 20%, transparent);
+  }
+  .nav-sub-count {
+    @apply shrink-0 text-[12px] text-mute;
+  }
+  .nav-sub-item.is-active .nav-sub-count {
+    color: inherit;
   }
 }
 
