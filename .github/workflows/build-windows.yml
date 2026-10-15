@@ -14,6 +14,11 @@ on:
       - 'index.html'
       - 'vite.config.js'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: '要更新的既有 Release 標籤（例如 v1.0.0）；留空則只編譯'
+        required: false
+        default: ''
   workflow_call:
 
 permissions:
@@ -85,3 +90,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: out/WarehouseManager.exe
+
+      - name: 更新既有 Release（手動執行並指定標籤時）
+        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          # 標籤移到目前的提交，並以新編譯的 exe 取代 Release 附件（版本號不變）
+          git tag -f $env:TAG
+          git push -f origin "refs/tags/$env:TAG"
+          gh release upload $env:TAG out/WarehouseManager.exe --clobber
