@@ -23,9 +23,11 @@ pub const APP_STATE_FILE: &str = "_app_state";
 pub const PENDING_FILE: &str = "pending_tx";
 
 /// 專案內的資料檔（不含副檔名）
-pub const DATA_FILES: [&str; 5] = ["config", "products", "locations", "inventory", "logs"];
+pub const DATA_FILES: [&str; 6] = ["config", "products", "locations", "inventory", "logs", "remarks"];
 /// 前端可以用通用寫入 API 直接覆寫的檔案；inventory / logs 只能經由交易 API 異動
-pub const MASTER_FILES: [&str; 3] = ["config", "products", "locations"];
+pub const MASTER_FILES: [&str; 4] = ["config", "products", "locations", "remarks"];
+/// 刪除的專案移到這裡（名稱以底線開頭，不會出現在專案清單），需要時可手動救回
+pub const TRASH_DIR: &str = "_已刪除專案";
 
 pub fn validate_file_type(file_type: &str) -> AppResult<()> {
     if DATA_FILES.contains(&file_type) {
@@ -138,6 +140,26 @@ pub fn create_project(root: &Path, project: &str) -> AppResult<String> {
     }
     init_project(root, &name)?;
     Ok(name)
+}
+
+/// 刪除專案：整個資料夾移到 projects/_已刪除專案/<名稱>_<時間>，不直接抹除。
+/// 若刪除後沒有任何專案，自動建立預設專案。回傳剩餘的專案清單。
+pub fn delete_project(root: &Path, project: &str) -> AppResult<Vec<String>> {
+    let dir = project_dir(root, project)?;
+    let trash = root.join(TRASH_DIR);
+    fs::create_dir_all(&trash).map_err(|e| AppError::io("建立已刪除專案資料夾失敗", &e))?;
+    let stamp = Local::now().format("%Y%m%d_%H%M%S").to_string();
+    let mut dest = trash.join(format!("{project}_{stamp}"));
+    let mut n = 1;
+    while dest.exists() {
+        dest = trash.join(format!("{project}_{stamp}_{n}"));
+        n += 1;
+    }
+    rename_with_retry(&dir, &dest).map_err(|e| AppError::io(&format!("刪除專案「{project}」失敗"), &e))?;
+    if list_projects(root)?.is_empty() {
+        init_project(root, DEFAULT_PROJECT)?;
+    }
+    list_projects(root)
 }
 
 /// 初始化（或補齊）專案目錄結構；已存在的檔案不會被覆蓋。
@@ -372,6 +394,21 @@ mod tests {
         }
         assert!(dir.join(BACKUPS_DIR).is_dir());
         assert_eq!(read_json(&dir, "config").unwrap()["name"], DEFAULT_PROJECT);
+    }
+
+    #[test]
+    fn delete_project_moves_to_trash_and_keeps_one_project() {
+        let root = temp_root("del");
+        ensure_root(&root).unwrap();
+        create_project(&root, "分店倉").unwrap();
+        let left = delete_project(&root, "分店倉").unwrap();
+        assert_eq!(left, vec![DEFAULT_PROJECT.to_string()]);
+        let trashed: Vec<_> = fs::read_dir(root.join(TRASH_DIR)).unwrap().flatten().collect();
+        assert_eq!(trashed.len(), 1);
+        // 刪掉最後一個專案時自動建立預設專案
+        let left = delete_project(&root, DEFAULT_PROJECT).unwrap();
+        assert_eq!(left, vec![DEFAULT_PROJECT.to_string()]);
+        assert!(delete_project(&root, "不存在").is_err());
     }
 
     #[test]

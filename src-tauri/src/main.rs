@@ -18,6 +18,7 @@ fn main() {
             commands::get_app_info,
             commands::get_projects,
             commands::create_project,
+            commands::delete_project,
             commands::open_project,
             commands::read_data,
             commands::write_data_atomic,
@@ -27,5 +28,5 @@ fn main() {
             commands::export_project_zip,
         ])
         .run(tauri::generate_context!())
-        .expect("無法啟動零售倉儲管理系統");
+        .expect("無法啟動倉儲管理系統");
 }

@@ -1,5 +1,5 @@
 <script setup>
-// 「現量 → 異動後」預覽，像貨架標籤一樣大字顯示
+// 「現量 → 異動後」預覽
 import { fmtInt } from '../utils/format'
 
 defineProps({
@@ -12,18 +12,18 @@ defineProps({
 </script>
 
 <template>
-  <div class="flex items-end gap-3 rounded-lg border border-line bg-surface/70 px-4 py-3">
+  <div class="panel flex items-end gap-4 px-6 py-5">
     <div>
-      <div class="text-[12px] text-mute">{{ caption }}</div>
-      <div class="num text-3xl leading-none">{{ fmtInt(before) }}</div>
+      <div class="text-[12.5px] text-mute">{{ caption }}</div>
+      <div class="num mt-1 text-[34px] leading-none">{{ fmtInt(before) }}</div>
     </div>
     <template v-if="after !== null">
-      <svg viewBox="0 0 24 24" class="mb-1 h-5 w-5 text-mute" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+      <svg viewBox="0 0 24 24" class="mb-1.5 h-5 w-5 text-mute" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
       <div>
-        <div class="text-[12px] text-mute">異動後</div>
-        <div class="num text-3xl leading-none" :class="danger ? 'text-signal' : ''">{{ fmtInt(after) }}</div>
+        <div class="text-[12.5px] text-mute">異動後</div>
+        <div class="num mt-1 text-[34px] leading-none" :class="danger ? 'text-signal' : 'text-accent'">{{ fmtInt(after) }}</div>
       </div>
     </template>
-    <div class="ml-auto pb-0.5 text-[13px] text-mute">{{ unit }}</div>
+    <div class="ml-auto pb-1 text-[13px] text-mute">{{ unit }}</div>
   </div>
 </template>

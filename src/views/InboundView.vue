@@ -89,7 +89,7 @@ onMounted(() => picker.value?.focus())
   <PageHeader title="入庫" hint="選擇品項或輸入新品項名稱 → 確認數量 → 按 Enter 或「確認入庫」" />
 
   <div class="grid max-w-5xl grid-cols-5 gap-6">
-    <form class="panel col-span-3 space-y-5 p-6" @submit.prevent="submit">
+    <form class="panel col-span-3 space-y-6 p-7" @submit.prevent="submit">
       <ProductPicker ref="picker" :selected="selected" allow-create @select="onSelect" @clear="onClear" />
 
       <div>
@@ -123,7 +123,7 @@ onMounted(() => picker.value?.focus())
         </div>
       </div>
 
-      <button type="submit" class="btn-go w-full py-3 text-[15px]" :disabled="!canSubmit">確認入庫</button>
+      <button type="submit" class="btn-go w-full py-3.5 text-[15.5px]" :disabled="!canSubmit">確認入庫</button>
     </form>
 
     <aside class="col-span-2 space-y-4">
@@ -134,13 +134,13 @@ onMounted(() => picker.value?.focus())
         :caption="`${locLabel(loc)} 現有`"
         unit="件"
       />
-      <div v-if="productId" class="panel p-4">
+      <div v-if="productId" class="panel p-5">
         <h3 class="mb-2 text-[13px] font-semibold text-mute">此品項目前存放位置</h3>
         <ul v-if="stock.rowsOfProduct(productId).length" class="space-y-1.5">
           <li v-for="r in stock.rowsOfProduct(productId)" :key="r.location_id">
             <button
               type="button"
-              class="flex w-full justify-between rounded-lg px-2 py-1 text-left hover:bg-surface"
+              class="flex w-full justify-between rounded-full px-3 py-1.5 text-left hover:bg-hover"
               @click="location = r.location_id"
             >
               <span>{{ locLabel(r.location_id) }}</span>

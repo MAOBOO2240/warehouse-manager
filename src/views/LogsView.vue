@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ActionBadge from '../components/ActionBadge.vue'
+import DateField from '../components/DateField.vue'
 import { useStockStore } from '../stores/stock'
 import { useUiStore } from '../stores/ui'
 import { useProjectStore } from '../stores/project'
@@ -68,31 +69,25 @@ async function exportCsv() {
     <button type="button" class="btn-primary" :disabled="!filtered.length" @click="exportCsv">匯出 CSV</button>
   </PageHeader>
 
-  <div class="panel mb-4 flex flex-wrap items-end gap-3 p-3">
+  <div class="panel mb-5 flex flex-wrap items-end gap-4 p-5">
     <div>
       <label class="field-label" for="lg-type">操作類型</label>
-      <select id="lg-type" v-model="type" class="field w-36">
+      <select id="lg-type" v-model="type" class="field w-40 rounded-full">
         <option value="">全部</option>
         <option v-for="key in ACTIVE_ACTIONS" :key="key" :value="key">{{ ACTIONS[key].label }}</option>
       </select>
     </div>
-    <div>
-      <label class="field-label" for="lg-from">起始日期</label>
-      <input id="lg-from" v-model="from" type="date" class="field num w-40" />
-    </div>
-    <div>
-      <label class="field-label" for="lg-to">結束日期</label>
-      <input id="lg-to" v-model="to" type="date" class="field num w-40" />
-    </div>
+    <DateField id="lg-from" v-model="from" label="起始日期" class="w-56" />
+    <DateField id="lg-to" v-model="to" label="結束日期" class="w-56" />
     <div class="min-w-64 flex-1">
       <label class="field-label" for="lg-q">品項或存放地點</label>
-      <input id="lg-q" v-model="q" class="field" placeholder="輸入關鍵字" />
+      <input id="lg-q" v-model="q" class="field rounded-full" placeholder="輸入關鍵字" />
     </div>
     <button type="button" class="btn-ghost" @click="reset">清除條件</button>
   </div>
 
   <div class="panel overflow-hidden">
-    <div class="max-h-[calc(100vh-20rem)] overflow-auto">
+    <div class="max-h-[calc(100vh-22rem)] overflow-auto">
       <table class="table-base">
         <thead>
           <tr>
@@ -125,7 +120,7 @@ async function exportCsv() {
         </tbody>
       </table>
     </div>
-    <div class="border-t border-line bg-surface/60 px-4 py-2 text-right text-[13px]">
+    <div class="px-6 py-3.5 text-right text-[13px] text-mute" style="box-shadow: inset 0 1px 0 var(--color-line)">
       符合條件 <span class="num">{{ fmtInt(filtered.length) }}</span> 筆
       <span v-if="filtered.length > DISPLAY_LIMIT" class="text-mute">（畫面顯示最新 {{ DISPLAY_LIMIT }} 筆，匯出 CSV 包含全部）</span>
     </div>

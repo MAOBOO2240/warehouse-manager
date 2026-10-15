@@ -4,14 +4,14 @@ const ui = useUiStore()
 </script>
 
 <template>
-  <div class="pointer-events-none fixed right-5 bottom-5 z-[60] flex w-96 flex-col gap-2" aria-live="polite">
+  <div class="pointer-events-none fixed right-6 bottom-6 z-[60] flex w-96 flex-col gap-2.5" aria-live="polite">
     <div
       v-for="t in ui.toasts"
       :key="t.id"
-      class="pointer-events-auto rounded-lg border-l-4 bg-white px-4 py-3 text-[14px] shadow-lg whitespace-pre-line"
-      :class="t.type === 'error' ? 'border-signal text-signal' : 'border-go text-ink'"
+      class="panel pointer-events-auto flex items-start gap-3 rounded-2xl px-4 py-3 text-[14px] whitespace-pre-line"
     >
-      {{ t.text }}
+      <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" :class="t.type === 'error' ? 'bg-signal' : 'bg-go'" aria-hidden="true" />
+      <span :class="t.type === 'error' ? 'text-signal' : 'text-ink'">{{ t.text }}</span>
     </div>
   </div>
 </template>

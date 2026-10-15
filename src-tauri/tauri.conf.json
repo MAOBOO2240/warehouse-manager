@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "WarehouseManager",
+  "productName": "倉儲管理系統",
   "version": "1.0.0",
   "identifier": "tw.local.warehousemanager",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "零售倉儲管理系統",
+        "title": "倉儲管理系統",
         "width": 1280,
         "height": 850,
         "minWidth": 1100,

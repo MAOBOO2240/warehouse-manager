@@ -110,15 +110,15 @@ onMounted(() => picker.value?.focus())
   <PageHeader title="出庫/損壞" hint="數量不可超過該存放地點的現有庫存，系統會在畫面與後端雙重阻擋" />
 
   <div class="grid max-w-5xl grid-cols-5 gap-6">
-    <form class="panel col-span-3 space-y-5 p-6" @submit.prevent="submit">
+    <form class="panel col-span-3 space-y-6 p-7" @submit.prevent="submit">
       <ProductPicker ref="picker" :selected="selected" @select="onSelect" @clear="onClear" />
 
       <div>
         <label class="field-label">存放地點</label>
-        <div v-if="!productId" class="rounded-lg border border-dashed border-line px-3 py-3 text-[13px] text-mute">
+        <div v-if="!productId" class="rounded-2xl bg-raised px-4 py-3.5 text-[13px] text-mute">
           先選擇品項，這裡會列出有庫存的存放地點
         </div>
-        <div v-else-if="!rows.length" class="rounded-lg border border-signal/30 bg-signal-soft px-3 py-3 text-[13px] text-signal">
+        <div v-else-if="!rows.length" class="rounded-2xl bg-signal-soft px-4 py-3.5 text-[13px] text-signal">
           此品項目前沒有庫存
         </div>
         <div v-else class="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto pr-1">
@@ -126,8 +126,8 @@ onMounted(() => picker.value?.focus())
             v-for="r in rows"
             :key="r.location_id"
             type="button"
-            class="flex items-center justify-between rounded-lg border-2 px-3 py-2 text-left transition-colors"
-            :class="location === r.location_id ? 'border-ink bg-ink text-white' : 'border-line bg-white hover:border-ink-3'"
+            class="pill justify-between px-4 py-2.5 text-left"
+            :class="location === r.location_id ? 'pill-on' : ''"
             @click="location = r.location_id"
           >
             <span class="min-w-0 truncate text-[14px]" :class="r.location_id ? '' : 'italic opacity-80'">{{ locLabel(r.location_id) }}</span>
@@ -143,13 +143,9 @@ onMounted(() => picker.value?.focus())
             v-for="a in ACTIONS"
             :key="a.id"
             type="button"
-            class="rounded-lg border-2 py-2.5 text-[15px] font-semibold transition-colors"
+            class="pill py-2.5 text-[15px]"
             :class="
-              action === a.id
-                ? a.id === 'DAMAGE'
-                  ? 'border-signal bg-signal text-white'
-                  : 'border-ink bg-ink text-white'
-                : 'border-line bg-white text-ink-3 hover:border-ink-3'
+              action === a.id ? (a.id === 'DAMAGE' ? 'pill-danger-on' : 'pill-on') : ''
             "
             :aria-pressed="action === a.id"
             @click="action = a.id"
@@ -164,8 +160,8 @@ onMounted(() => picker.value?.focus())
             v-for="r in DAMAGE_REASONS"
             :key="r"
             type="button"
-            class="rounded-full border px-4 py-1.5 text-[14px]"
-            :class="damageReason === r ? 'border-signal bg-signal-soft font-semibold text-signal' : 'border-line bg-white hover:border-ink-3'"
+            class="pill px-4 py-1.5"
+            :class="damageReason === r ? 'pill-danger-on' : ''"
             :aria-pressed="damageReason === r"
             @click="pickReason(r)"
           >{{ r === '其他' ? '其他（自行輸入）' : r }}</button>
@@ -189,7 +185,7 @@ onMounted(() => picker.value?.focus())
             ref="qtyInput"
             v-model="qtyText"
             class="field num text-lg"
-            :class="insufficient ? 'border-signal bg-signal-soft focus:border-signal focus:ring-signal/20' : ''"
+            :class="insufficient ? 'border-signal/70 bg-signal-soft focus:border-signal focus:ring-signal/20' : ''"
             inputmode="numeric"
             placeholder="0"
           />
@@ -203,7 +199,7 @@ onMounted(() => picker.value?.focus())
 
       <div
         v-if="insufficient"
-        class="rounded-lg border-2 border-signal bg-signal-soft px-4 py-3 text-[15px] font-bold text-signal"
+        class="rounded-2xl bg-signal-soft px-5 py-3.5 text-[15px] font-bold text-signal ring-2 ring-signal/50"
         role="alert"
       >
         庫存不足！此存放地點剩餘 {{ fmtInt(available) }} 件，不可{{ verb }} {{ fmtInt(qty) }} 件
@@ -211,7 +207,7 @@ onMounted(() => picker.value?.focus())
 
       <button
         type="submit"
-        class="w-full py-3 text-[15px]"
+        class="w-full py-3.5 text-[15.5px]"
         :class="action === 'DAMAGE' ? 'btn-danger' : 'btn-primary'"
         :disabled="!canSubmit"
       >確認{{ verb }}</button>

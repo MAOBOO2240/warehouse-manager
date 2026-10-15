@@ -107,6 +107,13 @@ pub async fn read_data(project: String, file_type: String, state: State<'_, AppS
     storage::read_json(&dir, &file_type)
 }
 
+/// 刪除專案（移到 projects/_已刪除專案），回傳剩餘專案清單
+#[tauri::command]
+pub async fn delete_project(project: String, state: State<'_, AppState>) -> AppResult<Vec<String>> {
+    let _q = state.queue();
+    storage::delete_project(&state.root()?, &project)
+}
+
 /// 主檔寫入（商品 / 庫位 / 設定）。庫存與日誌只能經由 apply_transaction 異動。
 #[tauri::command]
 pub async fn write_data_atomic(

@@ -52,9 +52,9 @@ async function retry() {
       專案「{{ project.current }}」有以下資料檔無法正常讀取。為避免覆蓋資料，系統目前為<strong>唯讀模式</strong>。
     </p>
     <ul class="mt-3 space-y-2">
-      <li v-for="i in project.issues" :key="i.file" class="rounded-lg border border-signal/25 bg-signal-soft/60 px-3 py-2">
+      <li v-for="i in project.issues" :key="i.file" class="rounded-2xl bg-signal-soft px-4 py-3">
         <div class="font-semibold">{{ FILE_LABELS[i.file] ?? i.file }}</div>
-        <div class="mt-0.5 text-[13px] text-ink-3">{{ i.message }}</div>
+        <div class="mt-0.5 text-[13px] text-ink-2">{{ i.message }}</div>
         <div class="mt-0.5 text-[12.5px]" :class="i.has_backup ? 'text-go' : 'text-signal'">
           {{ i.code === 'FILE_LOCKED' ? '請關閉正在開啟此檔的程式後按「重新讀取」' : i.has_backup ? '有可用的 .bak 備份' : '找不到可用的備份' }}
         </div>

@@ -42,25 +42,25 @@ const recent = computed(() => stock.logs.slice(-10).reverse())
     <button type="button" class="btn-primary" @click="ui.go('outbound')">出庫/損壞</button>
   </PageHeader>
 
-  <section class="grid grid-cols-4 gap-4">
-    <div v-for="s in stats" :key="s.label" class="panel px-5 py-4">
+  <section class="grid grid-cols-4 gap-5">
+    <div v-for="s in stats" :key="s.label" class="panel px-6 py-5">
       <div class="text-[13px] text-mute">{{ s.label }}</div>
       <div class="mt-2 flex items-baseline gap-1.5">
-        <span class="num text-[30px] leading-none">{{ s.value }}</span>
+        <span class="num text-[34px] leading-none">{{ s.value }}</span>
         <span class="text-[13px] text-mute">{{ s.unit }}</span>
       </div>
     </div>
   </section>
 
-  <section class="mt-6">
-    <h2 class="mb-3 text-[16px] font-bold">最近異動</h2>
+  <section class="mt-8">
+    <h2 class="mb-3 pl-1 text-[17px] font-bold">最近異動</h2>
     <div class="panel overflow-hidden">
       <div v-if="!recent.length" class="px-5 py-10 text-center text-mute">
         還沒有任何異動紀錄。
-        <button type="button" class="ml-1 font-semibold text-steel underline" @click="ui.go('inbound')">從第一筆入庫開始</button>
+        <button type="button" class="ml-1 font-semibold text-accent underline" @click="ui.go('inbound')">從第一筆入庫開始</button>
       </div>
-      <ul v-else class="divide-y divide-line">
-        <li v-for="l in recent" :key="l.id" class="flex items-center gap-4 px-5 py-3">
+      <ul v-else class="p-2">
+        <li v-for="l in recent" :key="l.id" class="flex items-center gap-4 rounded-2xl px-4 py-3.5 odd:bg-ink/[0.035]">
           <ActionBadge :type="l.action_type" />
           <div class="min-w-0 flex-1">
             <div class="truncate text-[14px]">{{ l.product_name }}</div>
@@ -75,7 +75,7 @@ const recent = computed(() => stock.logs.slice(-10).reverse())
       <button
         v-if="recent.length"
         type="button"
-        class="w-full border-t border-line py-2.5 text-[13px] text-steel hover:bg-surface"
+        class="w-full py-3 text-[13.5px] font-semibold text-accent hover:bg-hover"
         @click="ui.go('logs')"
       >查看全部異動流水帳</button>
     </div>

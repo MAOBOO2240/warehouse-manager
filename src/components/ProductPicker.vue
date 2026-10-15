@@ -77,7 +77,7 @@ defineExpose({ focus })
   <div>
     <label class="field-label">{{ label }}</label>
 
-    <div v-if="selected" class="flex items-center gap-3 rounded-lg border-2 border-ink/80 bg-white px-3 py-2.5">
+    <div v-if="selected" class="flex items-center gap-3 rounded-2xl bg-accent-soft px-4 py-3 ring-2 ring-accent/50">
       <div class="min-w-0 flex-1">
         <div class="truncate text-[15px] font-semibold">{{ selected.name }}</div>
         <div class="mt-0.5 text-[12.5px] text-mute">
@@ -107,14 +107,14 @@ defineExpose({ focus })
       <ul
         v-if="open"
         ref="listEl"
-        class="absolute inset-x-0 top-full z-30 mt-1.5 max-h-80 overflow-y-auto overscroll-contain rounded-lg border border-line bg-white py-1 shadow-lg"
+        class="panel absolute inset-x-0 top-full z-30 mt-2 max-h-80 overflow-y-auto overscroll-contain rounded-2xl p-1.5"
       >
         <li v-for="(opt, i) in options" :key="opt.create ? '__create' : opt.product.id">
           <button
             type="button"
             :data-active="i === active"
-            class="flex w-full items-center gap-3 px-3 py-2 text-left"
-            :class="i === active ? 'bg-steel-soft' : 'hover:bg-surface'"
+            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left"
+            :class="i === active ? 'bg-accent-soft' : 'hover:bg-hover'"
             @mousedown.prevent="choose(opt)"
             @mousemove="active = i"
           >

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { api, ApiError } from '../api'
 import { useProductStore } from './products'
 import { useStockStore } from './stock'
+import { useRemarkStore } from './remarks'
 
 export const FILE_LABELS = {
   config: '專案設定 config.json',
@@ -10,6 +11,7 @@ export const FILE_LABELS = {
   locations: '存放地點 locations.json',
   inventory: '即時庫存 inventory.json',
   logs: '異動流水帳 logs.json',
+  remarks: '庫存註記 remarks.json',
 }
 
 export const useProjectStore = defineStore('project', () => {
@@ -67,6 +69,7 @@ export const useProjectStore = defineStore('project', () => {
       const stock = useStockStore()
       stock.inventory = res.data.inventory ?? []
       stock.logs = res.data.logs ?? []
+      useRemarkStore().items = res.data.remarks ?? []
     } finally {
       loading.value = false
     }
@@ -97,12 +100,20 @@ export const useProjectStore = defineStore('project', () => {
     return failed
   }
 
+  /** 刪除專案後開啟剩下的第一個專案，回傳開啟的專案名稱 */
+  async function remove(name) {
+    const left = await api.deleteProject(name)
+    projects.value = left
+    await open(left[0])
+    return left[0]
+  }
+
   async function exportZip() {
     return api.exportProjectZip(current.value)
   }
 
   return {
     ready, fatal, rootPath, version, projects, current, loading, issues, recovered, readOnly,
-    assertWritable, init, refreshList, open, create, restoreFromBackups, exportZip,
+    assertWritable, init, refreshList, open, create, remove, restoreFromBackups, exportZip,
   }
 })

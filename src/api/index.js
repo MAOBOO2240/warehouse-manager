@@ -31,6 +31,7 @@ export const api = {
   getAppInfo: () => call('get_app_info'),
   getProjects: () => call('get_projects'),
   createProject: (name) => call('create_project', { name }),
+  deleteProject: (project) => call('delete_project', { project }),
   openProject: (project) => call('open_project', { project }),
   readData: (project, fileType) => call('read_data', { project, fileType }),
   writeDataAtomic: (project, fileType, content) => call('write_data_atomic', { project, fileType, content }),

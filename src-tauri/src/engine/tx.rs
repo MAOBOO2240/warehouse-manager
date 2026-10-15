@@ -163,6 +163,14 @@ impl<'a> Ctx<'a> {
     }
 }
 
+fn loc_name(l: &str) -> &str {
+    if l.is_empty() {
+        "未指定"
+    } else {
+        l
+    }
+}
+
 fn qty_at(inv: &[InvRow], p: &str, l: &str) -> i64 {
     inv.iter()
         .find(|r| r.product_id == p && r.location_id == l)
@@ -402,7 +410,7 @@ pub fn compute(
                 from_location_id,
                 -quantity,
                 from_after,
-                format!("庫位調撥：調出至 {to_location_id}"),
+                format!("移動存放地點：移至 {}", loc_name(to_location_id)),
                 note.clone(),
             );
             logs.push(
@@ -412,7 +420,7 @@ pub fn compute(
                 to_location_id,
                 *quantity,
                 to_after,
-                format!("庫位調撥：由 {from_location_id} 調入"),
+                format!("移動存放地點：由 {} 移入", loc_name(from_location_id)),
                 note,
             );
         }
@@ -676,6 +684,25 @@ pub fn validate_master_write(dir: &Path, stem: &str, value: &Value) -> AppResult
                         "{what}「{}」尚有庫存 {qty} 件，無法刪除。請先出庫、調撥或盤點歸零後再刪除。",
                         old_name(id)
                     )));
+                }
+            }
+            Ok(())
+        }
+        "remarks" => {
+            // 庫存清單的「註記」：[{ product_id, location_id, remark }]
+            let items = value.as_array().ok_or_else(|| AppError::invalid("資料必須是陣列"))?;
+            let mut keys = HashSet::new();
+            for it in items {
+                let pid = str_field(it, "product_id");
+                let loc = str_field(it, "location_id");
+                if pid.is_empty() {
+                    return Err(AppError::invalid("註記缺少品項"));
+                }
+                if str_field(it, "remark").chars().count() > 200 {
+                    return Err(AppError::invalid("註記請在 200 個字以內"));
+                }
+                if !keys.insert((pid, loc)) {
+                    return Err(AppError::invalid("同一品項與地點的註記重複"));
                 }
             }
             Ok(())
