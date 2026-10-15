@@ -89,7 +89,7 @@ onMounted(() => picker.value?.focus())
   <PageHeader title="入庫" hint="選擇品項或輸入新品項名稱 → 確認數量 → 按 Enter 或「確認入庫」" />
 
   <div class="grid max-w-5xl grid-cols-5 gap-6">
-    <form class="panel col-span-3 space-y-6 p-7" @submit.prevent="submit">
+    <form class="panel col-span-3 space-y-6 p-7" style="--tone: var(--color-go)" @submit.prevent="submit">
       <ProductPicker ref="picker" :selected="selected" allow-create @select="onSelect" @clear="onClear" />
 
       <div>

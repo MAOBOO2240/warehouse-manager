@@ -707,6 +707,24 @@ pub fn validate_master_write(dir: &Path, stem: &str, value: &Value) -> AppResult
             }
             Ok(())
         }
+        "row_order" => {
+            // 庫存清單的自訂排列順序：[{ product_id, location_id }]，依陣列先後排列
+            let items = value.as_array().ok_or_else(|| AppError::invalid("資料必須是陣列"))?;
+            if items.len() > 100_000 {
+                return Err(AppError::invalid("排列資料過多"));
+            }
+            let mut keys = HashSet::new();
+            for it in items {
+                let pid = str_field(it, "product_id");
+                if pid.is_empty() {
+                    return Err(AppError::invalid("排列資料缺少品項"));
+                }
+                if !keys.insert((pid, str_field(it, "location_id"))) {
+                    return Err(AppError::invalid("排列資料重複"));
+                }
+            }
+            Ok(())
+        }
         _ => Err(AppError::invalid(format!(
             "{stem} 不可直接寫入，庫存與日誌只能透過作業交易異動"
         ))),
@@ -966,5 +984,26 @@ mod tests {
         assert!(validate_master_write(&dir, "inventory", &json!([])).is_err());
         let dup = json!([{"id":"A","name":"a","barcode":"1"},{"id":"B","name":"b","barcode":"1"}]);
         assert!(validate_master_write(&dir, "products", &dup).is_err());
+    }
+
+    #[test]
+    fn row_order_validation() {
+        let root = crate::engine::storage::tests_support::temp_root("order");
+        create_project(&root, "p").unwrap();
+        let dir = project_dir(&root, "p").unwrap();
+        let ok = json!([
+            {"product_id":"PROD-001","location_id":""},
+            {"product_id":"PROD-001","location_id":"A 架"},
+            {"product_id":"PROD-002","location_id":""}
+        ]);
+        assert!(validate_master_write(&dir, "row_order", &ok).is_ok());
+        let dup = json!([
+            {"product_id":"PROD-001","location_id":""},
+            {"product_id":"PROD-001","location_id":""}
+        ]);
+        assert!(validate_master_write(&dir, "row_order", &dup).is_err());
+        assert!(validate_master_write(&dir, "row_order", &json!([{"location_id":"A"}])).is_err());
+        assert!(validate_master_write(&dir, "row_order", &json!({})).is_err());
+        assert_eq!(read_json(&dir, "row_order").unwrap(), json!([]));
     }
 }

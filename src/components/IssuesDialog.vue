@@ -47,12 +47,15 @@ async function retry() {
 </script>
 
 <template>
-  <ModalDialog title="偵測到資料檔異常" width="max-w-xl" @close="emit('close')">
+  <ModalDialog title="偵測到資料檔異常" subtitle="目前為唯讀模式" width="max-w-xl" tone="safety" @close="emit('close')">
+    <template #icon>
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4.5M12 17v.01M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
+    </template>
     <p class="text-[14px] leading-relaxed">
       專案「{{ project.current }}」有以下資料檔無法正常讀取。為避免覆蓋資料，系統目前為<strong>唯讀模式</strong>。
     </p>
     <ul class="mt-3 space-y-2">
-      <li v-for="i in project.issues" :key="i.file" class="rounded-2xl bg-signal-soft px-4 py-3">
+      <li v-for="i in project.issues" :key="i.file" class="rounded-2xl border-[1.5px] border-signal/35 bg-signal-soft px-4 py-3">
         <div class="font-semibold">{{ FILE_LABELS[i.file] ?? i.file }}</div>
         <div class="mt-0.5 text-[13px] text-ink-2">{{ i.message }}</div>
         <div class="mt-0.5 text-[12.5px]" :class="i.has_backup ? 'text-go' : 'text-signal'">

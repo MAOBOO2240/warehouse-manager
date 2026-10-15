@@ -106,7 +106,10 @@ async function exportZip() {
     </div>
   </header>
 
-  <ModalDialog v-if="showNew" title="新增專案" @close="showNew = false">
+  <ModalDialog v-if="showNew" title="新增專案" subtitle="建立一個獨立的倉庫資料" tone="go" @close="showNew = false">
+    <template #icon>
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+    </template>
     <form @submit.prevent="createProject">
       <label class="field-label" for="new-project">專案名稱</label>
       <input id="new-project" ref="nameInput" v-model="newName" class="field" placeholder="例如：分店倉" maxlength="50" />
@@ -115,18 +118,18 @@ async function exportZip() {
     </form>
     <template #footer>
       <button type="button" class="btn-ghost" @click="showNew = false">取消</button>
-      <button type="button" class="btn-primary" :disabled="busy || !newName.trim()" @click="createProject">建立專案</button>
+      <button type="button" class="btn-go" :disabled="busy || !newName.trim()" @click="createProject">建立專案</button>
     </template>
   </ModalDialog>
 
-  <ModalDialog v-if="confirmDelete" title="刪除專案" @close="confirmDelete = false">
-    <div class="flex gap-4">
-      <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-signal-soft text-signal" aria-hidden="true">
-        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
-      </div>
+  <ModalDialog v-if="confirmDelete" title="刪除專案" subtitle="此動作需要再次確認" tone="signal" @close="confirmDelete = false">
+    <template #icon>
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4.5M12 17v.01M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
+    </template>
+    <div class="tone-card">
       <div class="text-[14.5px] leading-relaxed">
         <p>確定要刪除專案「<strong>{{ project.current }}</strong>」嗎？</p>
-        <p class="mt-2 text-[13px] text-mute">
+        <p class="mt-2 text-[13px] text-ink-2">
           此專案的品項、庫存與異動流水帳都會從系統中移除。資料夾會移到 projects 內的「_已刪除專案」，必要時仍可手動救回。
         </p>
       </div>

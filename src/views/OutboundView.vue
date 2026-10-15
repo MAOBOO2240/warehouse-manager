@@ -110,7 +110,7 @@ onMounted(() => picker.value?.focus())
   <PageHeader title="出庫/損壞" hint="數量不可超過該存放地點的現有庫存，系統會在畫面與後端雙重阻擋" />
 
   <div class="grid max-w-5xl grid-cols-5 gap-6">
-    <form class="panel col-span-3 space-y-6 p-7" @submit.prevent="submit">
+    <form class="panel col-span-3 space-y-6 p-7" :style="{ '--tone': action === 'DAMAGE' ? 'var(--color-signal)' : 'var(--color-accent)' }" @submit.prevent="submit">
       <ProductPicker ref="picker" :selected="selected" @select="onSelect" @clear="onClear" />
 
       <div>

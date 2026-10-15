@@ -23,9 +23,11 @@ pub const APP_STATE_FILE: &str = "_app_state";
 pub const PENDING_FILE: &str = "pending_tx";
 
 /// 專案內的資料檔（不含副檔名）
-pub const DATA_FILES: [&str; 6] = ["config", "products", "locations", "inventory", "logs", "remarks"];
+pub const DATA_FILES: [&str; 7] = [
+    "config", "products", "locations", "inventory", "logs", "remarks", "row_order",
+];
 /// 前端可以用通用寫入 API 直接覆寫的檔案；inventory / logs 只能經由交易 API 異動
-pub const MASTER_FILES: [&str; 4] = ["config", "products", "locations", "remarks"];
+pub const MASTER_FILES: [&str; 5] = ["config", "products", "locations", "remarks", "row_order"];
 /// 刪除的專案移到這裡（名稱以底線開頭，不會出現在專案清單），需要時可手動救回
 pub const TRASH_DIR: &str = "_已刪除專案";
 

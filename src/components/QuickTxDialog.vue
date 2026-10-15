@@ -18,10 +18,10 @@ const stock = useStockStore()
 const ui = useUiStore()
 
 const MODES = {
-  in: { title: '入庫', verb: '入庫', btn: 'btn-go' },
-  out: { title: '出庫', verb: '出貨', btn: 'btn-primary' },
-  damage: { title: '損壞', verb: '登記損壞', btn: 'btn-danger' },
-  move: { title: '移到新地點', verb: '移動', btn: 'btn-primary' },
+  in: { title: '入庫', verb: '入庫', btn: 'btn-go', tone: 'go' },
+  out: { title: '出庫', verb: '出貨', btn: 'btn-primary', tone: 'accent' },
+  damage: { title: '登記損壞', verb: '登記損壞', btn: 'btn-danger', tone: 'signal' },
+  move: { title: '移到新地點', verb: '移動', btn: 'btn-violet', tone: 'violet' },
 }
 const DAMAGE_REASONS = ['道具受損', '印刷錯誤', '其他']
 
@@ -107,16 +107,22 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ModalDialog :title="`${cfg.title}・${row.name}`" @close="emit('close')">
+  <ModalDialog :title="cfg.title" :subtitle="row.name" :tone="cfg.tone" @close="emit('close')">
+    <template #icon>
+      <svg v-if="mode === 'in'" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10M7.5 9.5 12 14l4.5-4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg>
+      <svg v-else-if="mode === 'out'" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14V4M7.5 8.5 12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg>
+      <svg v-else-if="mode === 'damage'" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4.5M12 17v.01M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
+      <svg v-else viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M13.5 4.5 17 8l-3.5 3.5M20 16H7M10.5 12.5 7 16l3.5 3.5" /></svg>
+    </template>
     <form class="space-y-5" @submit.prevent="submit">
-      <div class="flex items-center justify-between rounded-2xl bg-raised px-5 py-3.5">
+      <div class="tone-card flex items-center justify-between">
         <div>
-          <div class="text-[12.5px] text-mute">{{ mode === 'move' ? '原存放地點' : '存放地點' }}</div>
-          <div class="mt-0.5 text-[15px] font-semibold" :class="row.location_id ? '' : 'italic text-mute'">{{ locLabel(row.location_id) }}</div>
+          <div class="text-[12.5px] font-semibold text-ink-2">{{ mode === 'move' ? '原存放地點' : '存放地點' }}</div>
+          <div class="mt-0.5 text-[16px] font-bold" :class="row.location_id ? '' : 'italic text-mute'">{{ locLabel(row.location_id) }}</div>
         </div>
         <div class="text-right">
-          <div class="text-[12.5px] text-mute">現有</div>
-          <div class="num text-[24px] leading-tight">{{ fmtInt(available) }}</div>
+          <div class="text-[12.5px] font-semibold text-ink-2">現有庫存</div>
+          <div class="num text-[26px] leading-tight" :style="{ color: 'var(--tone)' }">{{ fmtInt(available) }}</div>
         </div>
       </div>
 

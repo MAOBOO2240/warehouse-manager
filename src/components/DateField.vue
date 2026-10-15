@@ -137,8 +137,8 @@ onBeforeUnmount(() => {
   <div ref="root" class="relative">
     <label v-if="label" class="field-label" :for="id || undefined">{{ label }}</label>
     <div
-      class="flex items-center gap-0.5 rounded-full bg-raised py-1 pr-1 pl-4 ring-accent/15 transition-shadow focus-within:ring-4"
-      :class="invalid ? 'ring-2 ring-signal/60' : ''"
+      class="date-box flex items-center gap-0.5 rounded-full border-[1.5px] border-field-line bg-field py-1 pr-1 pl-4 transition-[border-color,box-shadow] hover:border-field-line-hover"
+      :class="invalid ? '!border-signal' : ''"
     >
       <input
         :id="id || undefined"

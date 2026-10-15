@@ -4,6 +4,7 @@ import { api, ApiError } from '../api'
 import { useProductStore } from './products'
 import { useStockStore } from './stock'
 import { useRemarkStore } from './remarks'
+import { useRowOrderStore } from './rowOrder'
 
 export const FILE_LABELS = {
   config: '專案設定 config.json',
@@ -12,6 +13,7 @@ export const FILE_LABELS = {
   inventory: '即時庫存 inventory.json',
   logs: '異動流水帳 logs.json',
   remarks: '庫存註記 remarks.json',
+  row_order: '庫存清單排列順序 row_order.json',
 }
 
 export const useProjectStore = defineStore('project', () => {
@@ -70,6 +72,7 @@ export const useProjectStore = defineStore('project', () => {
       stock.inventory = res.data.inventory ?? []
       stock.logs = res.data.logs ?? []
       useRemarkStore().items = res.data.remarks ?? []
+      useRowOrderStore().items = res.data.row_order ?? []
     } finally {
       loading.value = false
     }
