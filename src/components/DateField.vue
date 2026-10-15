@@ -195,7 +195,7 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div v-if="open" class="panel absolute top-full left-0 z-40 mt-2 w-[296px] rounded-[28px] p-4" role="dialog" aria-label="選擇日期">
+    <div v-if="open" class="menu-panel absolute top-full left-0 z-40 mt-2 w-[296px] rounded-[28px] p-4" role="dialog" aria-label="選擇日期">
       <div class="mb-3 flex items-center justify-between">
         <button type="button" class="flex h-9 w-9 items-center justify-center rounded-full bg-raised hover:bg-hover" aria-label="上個月" @click="shift(-1)">
           <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6" /></svg>

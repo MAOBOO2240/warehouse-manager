@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, ref } from 'vue'
 import ModalDialog from './ModalDialog.vue'
+import ProjectSwitcher from './ProjectSwitcher.vue'
 import { useProjectStore } from '../stores/project'
 import { useUiStore } from '../stores/ui'
 
@@ -15,8 +16,7 @@ const busy = ref(false)
 const nameInput = ref(null)
 const confirmDelete = ref(false)
 
-async function switchTo(e) {
-  const name = e.target.value
+async function switchTo(name) {
   if (name === project.current) return
   try {
     await project.open(name)
@@ -24,7 +24,6 @@ async function switchTo(e) {
     ui.ok(`已切換至「${name}」`)
   } catch (err) {
     ui.error(err)
-    e.target.value = project.current
   }
 }
 
@@ -66,6 +65,20 @@ async function deleteProject() {
   }
 }
 
+async function importZip() {
+  busy.value = true
+  try {
+    const name = await project.importZip()
+    if (!name) return
+    ui.go('dashboard')
+    ui.ok(`已將備份匯入為新專案「${name}」，並切換過去`)
+  } catch (err) {
+    ui.error(err)
+  } finally {
+    busy.value = false
+  }
+}
+
 async function exportZip() {
   try {
     const path = await project.exportZip()
@@ -79,17 +92,10 @@ async function exportZip() {
 <template>
   <header class="flex shrink-0 items-center gap-2.5 px-7 pt-5 pb-1">
     <label class="pl-1 text-[13px] font-semibold text-mute" for="project-select">目前專案</label>
-    <select
-      id="project-select"
-      class="field w-56 rounded-full py-2 font-semibold"
-      :value="project.current"
-      :disabled="project.loading"
-      @change="switchTo"
-    >
-      <option v-for="p in project.projects" :key="p" :value="p">{{ p }}</option>
-    </select>
+    <ProjectSwitcher :projects="project.projects" :current="project.current" :disabled="project.loading" @select="switchTo" />
     <button type="button" class="btn-ghost btn-sm" @click="openNew">新增專案</button>
     <button type="button" class="btn-ghost btn-sm text-signal" :disabled="!project.current" @click="confirmDelete = true">刪除專案</button>
+    <button type="button" class="btn-ghost btn-sm" :disabled="busy" title="選擇先前匯出的備份 ZIP，匯入成一個新專案" @click="importZip">匯入備份 (ZIP)</button>
     <button type="button" class="btn-ghost btn-sm" :disabled="!project.current" @click="exportZip">匯出備份 (ZIP)</button>
 
     <button

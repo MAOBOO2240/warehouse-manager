@@ -107,7 +107,7 @@ defineExpose({ focus })
       <ul
         v-if="open"
         ref="listEl"
-        class="panel absolute inset-x-0 top-full z-30 mt-2 max-h-80 overflow-y-auto overscroll-contain rounded-2xl p-1.5"
+        class="menu-panel absolute inset-x-0 top-full z-30 mt-2 max-h-80 overflow-y-auto overscroll-contain rounded-2xl p-1.5"
       >
         <li v-for="(opt, i) in options" :key="opt.create ? '__create' : opt.product.id">
           <button

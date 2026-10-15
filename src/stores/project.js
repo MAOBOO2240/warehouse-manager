@@ -111,12 +111,21 @@ export const useProjectStore = defineStore('project', () => {
     return left[0]
   }
 
+  /** 匯入備份 ZIP 成為新專案並切換過去；取消時回傳 null */
+  async function importZip() {
+    const name = await api.importProjectZip()
+    if (!name) return null
+    await refreshList()
+    await open(name)
+    return name
+  }
+
   async function exportZip() {
     return api.exportProjectZip(current.value)
   }
 
   return {
     ready, fatal, rootPath, version, projects, current, loading, issues, recovered, readOnly,
-    assertWritable, init, refreshList, open, create, remove, restoreFromBackups, exportZip,
+    assertWritable, init, refreshList, open, create, remove, restoreFromBackups, exportZip, importZip,
   }
 })

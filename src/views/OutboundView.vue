@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ProductPicker from '../components/ProductPicker.vue'
 import QtyPreview from '../components/QtyPreview.vue'
@@ -59,9 +59,6 @@ async function onSelect(sel) {
   qtyText.value = p?.first_qty > 0 ? String(p.first_qty) : ''
   const list = stock.rowsOfProduct(sel.id)
   if (list.length) location.value = list[0].location_id
-  await nextTick()
-  qtyInput.value?.focus()
-  qtyInput.value?.select()
 }
 
 function onClear() {
@@ -94,8 +91,6 @@ async function submit() {
     qtyText.value = ''
     note.value = ''
     otherReason.value = ''
-    await nextTick()
-    picker.value?.focus()
   } catch (err) {
     ui.error(err)
   } finally {
@@ -103,7 +98,6 @@ async function submit() {
   }
 }
 
-onMounted(() => picker.value?.focus())
 </script>
 
 <template>

@@ -202,3 +202,20 @@ pub async fn export_project_zip(
     engine::zip_project(&dir, &project, &path)?;
     Ok(Some(path.to_string_lossy().to_string()))
 }
+
+/// 選擇「匯出備份」產生的 .zip，匯入成一個新專案；回傳新專案名稱（取消時為 None）
+#[tauri::command]
+pub async fn import_project_zip(app: AppHandle, state: State<'_, AppState>) -> AppResult<Option<String>> {
+    let picked = app
+        .dialog()
+        .file()
+        .set_title("匯入專案備份")
+        .add_filter("ZIP 壓縮檔", &["zip"])
+        .blocking_pick_file();
+    let Some(path) = dialog_path(picked)? else {
+        return Ok(None);
+    };
+    let _q = state.queue();
+    let name = storage::import_project_zip(&state.root()?, &path)?;
+    Ok(Some(name))
+}

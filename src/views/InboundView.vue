@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import ProductPicker from '../components/ProductPicker.vue'
 import QtyPreview from '../components/QtyPreview.vue'
@@ -40,9 +40,6 @@ async function onSelect(sel) {
   } else {
     qtyText.value = ''
   }
-  await nextTick()
-  qtyInput.value?.focus()
-  qtyInput.value?.select()
 }
 
 function onClear() {
@@ -73,8 +70,6 @@ async function submit() {
     selected.value = null
     qtyText.value = ''
     note.value = ''
-    await nextTick()
-    picker.value?.focus()
   } catch (err) {
     ui.error(err)
   } finally {
@@ -82,7 +77,6 @@ async function submit() {
   }
 }
 
-onMounted(() => picker.value?.focus())
 </script>
 
 <template>

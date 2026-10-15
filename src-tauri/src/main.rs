@@ -26,6 +26,7 @@ fn main() {
             commands::restore_backup,
             commands::export_text_file,
             commands::export_project_zip,
+            commands::import_project_zip,
         ])
         .run(tauri::generate_context!())
         .expect("無法啟動倉儲管理系統");

@@ -187,6 +187,112 @@ pub fn init_project(root: &Path, name: &str) -> AppResult<()> {
     Ok(())
 }
 
+/// 從「匯出備份」產生的 ZIP 匯入成一個新專案，回傳新專案名稱。
+///
+/// - 壓縮檔可為「專案名稱/xxx.json」或直接把 json 放在最上層。
+/// - 只取出專案資料檔、pending_tx.json 與 backups/ 內的檔案，其他內容一律略過（防止路徑穿越）。
+/// - 名稱與既有專案重複時自動改名為「名稱 (2)」「名稱 (3)」…，原有專案完全不受影響。
+/// - 先解壓到暫存資料夾，全部成功才改名成正式專案資料夾。
+pub fn import_project_zip(root: &Path, zip_path: &Path) -> AppResult<String> {
+    use std::io::Read;
+    const MAX_ENTRY: u64 = 512 * 1024 * 1024;
+    const MAX_TOTAL: u64 = 2 * 1024 * 1024 * 1024;
+    let zerr = |e: zip::result::ZipError| AppError::invalid(format!("無法讀取 ZIP 檔：{e}"));
+    let file = fs::File::open(zip_path).map_err(|e| AppError::io("開啟 ZIP 檔失敗", &e))?;
+    let mut za = zip::ZipArchive::new(file).map_err(zerr)?;
+
+    // 整理檔名（統一用 / 分隔），找出專案資料所在的前綴
+    let names: Vec<String> = (0..za.len())
+        .filter_map(|i| za.by_index(i).ok().map(|f| f.name().replace('\\', "/")))
+        .collect();
+    let is_data = |rel: &str| {
+        rel.strip_suffix(".json")
+            .is_some_and(|stem| DATA_FILES.contains(&stem) || stem == PENDING_FILE)
+    };
+    let prefix = if names.iter().any(|n| is_data(n)) {
+        String::new()
+    } else {
+        let tops: std::collections::BTreeSet<&str> =
+            names.iter().filter_map(|n| n.split_once('/').map(|(t, _)| t)).collect();
+        tops.into_iter()
+            .find(|t| names.iter().any(|n| n.strip_prefix(&format!("{t}/")).is_some_and(is_data)))
+            .map(|t| format!("{t}/"))
+            .ok_or_else(|| AppError::invalid("這個 ZIP 檔不是倉儲管理系統的專案備份（找不到 products.json 等資料檔）"))?
+    };
+
+    // 決定專案名稱：資料夾名稱 → ZIP 檔名
+    let stem_name = zip_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("匯入專案")
+        .to_string();
+    let base = if prefix.is_empty() { stem_name } else { prefix.trim_end_matches('/').to_string() };
+    let base = validate_project_name(&base).unwrap_or_else(|_| "匯入專案".to_string());
+    let mut name = base.clone();
+    let mut n = 2;
+    while root.join(&name).exists() {
+        let suffix = format!(" ({n})");
+        let keep: String = base.chars().take(50 - suffix.chars().count()).collect();
+        name = format!("{}{suffix}", keep.trim_end());
+        n += 1;
+    }
+
+    let stamp = Local::now().format("%Y%m%d_%H%M%S").to_string();
+    let tmp = root.join(format!(".import_{stamp}_{}", std::process::id()));
+    let result = (|| -> AppResult<()> {
+        fs::create_dir_all(tmp.join(BACKUPS_DIR)).map_err(|e| AppError::io("建立暫存資料夾失敗", &e))?;
+        let mut total = 0u64;
+        for i in 0..za.len() {
+            let mut entry = za.by_index(i).map_err(zerr)?;
+            if entry.is_dir() {
+                continue;
+            }
+            let full = entry.name().replace('\\', "/");
+            let Some(rel) = full.strip_prefix(&prefix) else { continue };
+            let safe = |f: &str| {
+                !f.is_empty() && f != "." && f != ".." && !f.contains(['/', ':']) && !f.chars().any(char::is_control)
+            };
+            let dest = if is_data(rel) {
+                tmp.join(rel)
+            } else if let Some(f) = rel.strip_prefix("backups/") {
+                if !safe(f) {
+                    continue;
+                }
+                tmp.join(BACKUPS_DIR).join(f)
+            } else {
+                continue;
+            };
+            let mut buf = Vec::new();
+            (&mut entry)
+                .take(MAX_ENTRY + 1)
+                .read_to_end(&mut buf)
+                .map_err(|e| AppError::io("解壓縮失敗", &e))?;
+            total += buf.len() as u64;
+            if buf.len() as u64 > MAX_ENTRY || total > MAX_TOTAL {
+                return Err(AppError::invalid("ZIP 檔內容過大，無法匯入"));
+            }
+            fs::write(&dest, &buf).map_err(|e| AppError::io("寫入匯入資料失敗", &e))?;
+        }
+        Ok(())
+    })();
+    if let Err(e) = result {
+        let _ = fs::remove_dir_all(&tmp);
+        return Err(e);
+    }
+    let dir = root.join(&name);
+    if let Err(e) = rename_with_retry(&tmp, &dir) {
+        let _ = fs::remove_dir_all(&tmp);
+        return Err(AppError::io("建立匯入專案失敗", &e));
+    }
+    // 補齊舊版備份沒有的資料檔，並把設定檔內的名稱改成新專案名稱
+    init_project(root, &name)?;
+    if let Ok(Value::Object(mut cfg)) = read_json(&dir, "config") {
+        cfg.insert("name".into(), Value::String(name.clone()));
+        write_json_atomic(&dir, "config", &Value::Object(cfg), false)?;
+    }
+    Ok(name)
+}
+
 pub fn file_path(dir: &Path, stem: &str) -> PathBuf {
     dir.join(format!("{stem}.json"))
 }
@@ -411,6 +517,55 @@ mod tests {
         let left = delete_project(&root, DEFAULT_PROJECT).unwrap();
         assert_eq!(left, vec![DEFAULT_PROJECT.to_string()]);
         assert!(delete_project(&root, "不存在").is_err());
+    }
+
+    #[test]
+    fn import_zip_creates_new_project_without_touching_existing() {
+        use std::io::Write as _;
+        let root = temp_root("import");
+        ensure_root(&root).unwrap();
+        let zpath = root.join("..").join(format!("wm_import_{}.zip", std::process::id()));
+        {
+            let f = fs::File::create(&zpath).unwrap();
+            let mut zw = zip::ZipWriter::new(f);
+            let o = zip::write::SimpleFileOptions::default;
+            zw.add_directory("預設總倉/", o()).unwrap();
+            zw.start_file("預設總倉/products.json", o()).unwrap();
+            zw.write_all(br#"[{"id":"PROD-001","name":"a"}]"#).unwrap();
+            zw.start_file("預設總倉/config.json", o()).unwrap();
+            zw.write_all(br#"{"name":"預設總倉","schema_version":1}"#).unwrap();
+            zw.start_file("預設總倉/backups/products.json.20260101_000000.bak", o()).unwrap();
+            zw.write_all(b"[]").unwrap();
+            zw.start_file("預設總倉/../evil.json", o()).unwrap();
+            zw.write_all(b"x").unwrap();
+            zw.start_file("預設總倉/notes.txt", o()).unwrap();
+            zw.write_all(b"x").unwrap();
+            zw.finish().unwrap();
+        }
+        let name = import_project_zip(&root, &zpath).unwrap();
+        assert_eq!(name, "預設總倉 (2)");
+        let dir = project_dir(&root, &name).unwrap();
+        assert_eq!(read_json(&dir, "products").unwrap()[0]["name"], "a");
+        assert_eq!(read_json(&dir, "config").unwrap()["name"], "預設總倉 (2)");
+        assert!(file_path(&dir, "row_order").exists(), "缺少的資料檔應自動補齊");
+        assert!(dir.join(BACKUPS_DIR).join("products.json.20260101_000000.bak").exists());
+        assert!(!dir.join("notes.txt").exists());
+        assert!(!root.join("evil.json").exists());
+        // 原有專案不受影響
+        assert_eq!(read_json(&project_dir(&root, DEFAULT_PROJECT).unwrap(), "products").unwrap(), json!([]));
+        assert_eq!(list_projects(&root).unwrap().len(), 2);
+        // 不是專案備份的 ZIP 會被拒絕
+        let bad = root.join("..").join(format!("wm_bad_{}.zip", std::process::id()));
+        {
+            let mut zw = zip::ZipWriter::new(fs::File::create(&bad).unwrap());
+            zw.start_file("hello.txt", zip::write::SimpleFileOptions::default()).unwrap();
+            zw.write_all(b"hi").unwrap();
+            zw.finish().unwrap();
+        }
+        assert!(import_project_zip(&root, &bad).is_err());
+        assert_eq!(list_projects(&root).unwrap().len(), 2);
+        let _ = fs::remove_file(zpath);
+        let _ = fs::remove_file(bad);
     }
 
     #[test]
