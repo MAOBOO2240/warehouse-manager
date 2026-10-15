@@ -35,8 +35,6 @@ async function onSelect(sel) {
     const p = products.get(sel.id)
     // 自動帶入第一次入庫的數量
     qtyText.value = p?.first_qty > 0 ? String(p.first_qty) : ''
-    const rows = stock.rowsOfProduct(sel.id)
-    if (rows.length && !location.value) location.value = rows[0].location_id
   } else {
     qtyText.value = ''
   }
@@ -68,6 +66,7 @@ async function submit() {
     })
     ui.ok(`已入庫：${name} ${fmtInt(qty.value)} 件（${locLabel(loc.value)}）`)
     selected.value = null
+    location.value = ''
     qtyText.value = ''
     note.value = ''
   } catch (err) {

@@ -32,7 +32,7 @@ watch(
   () => {
     if (project.issues.length) showIssues.value = true
     if (project.recovered) {
-      ui.ok('偵測到上次未完成的異動（可能因斷電中斷），已自動補完並保持庫存與流水帳一致')
+      ui.ok('偵測到上次未完成的異動（可能因斷電中斷），已自動補完並保持庫存與歷史紀錄一致')
       project.recovered = false
     }
   },

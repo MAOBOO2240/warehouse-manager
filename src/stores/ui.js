@@ -4,9 +4,21 @@ import { ref, watch } from 'vue'
 const SETTINGS_KEY = 'warehouse-ui-settings'
 export const FONT_SCALES = { small: 0.9, medium: 1, large: 1.15 }
 
+/** 「清除緩存」後重新整理時，設定與結果經由網址 hash 帶回（localStorage 可能已被清空） */
+function readCacheHash() {
+  try {
+    const p = new URLSearchParams(location.hash.slice(1))
+    if (!p.has('cleared')) return null
+    return { cleared: Number(p.get('cleared')) || 0, settings: JSON.parse(p.get('s') || '{}') }
+  } catch {
+    return null
+  }
+}
+const cacheHash = readCacheHash()
+
 function loadSettings() {
   try {
-    const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
+    const raw = cacheHash?.settings ?? JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
     return {
       theme: raw.theme === 'light' ? 'light' : 'dark',
       fontSize: raw.fontSize in FONT_SCALES ? raw.fontSize : 'medium',
@@ -31,6 +43,23 @@ export const useUiStore = defineStore('ui', () => {
   let seq = 0
 
   applySettings(settings.value)
+  if (cacheHash) {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings.value))
+    } catch {
+      /* 忽略 */
+    }
+    history.replaceState(null, '', location.pathname + location.search)
+    setTimeout(() => toast(`緩存已清除${cacheHash.cleared ? `（移除 ${cacheHash.cleared} 個暫存檔）` : ''}，資料已重新從檔案載入`, 'ok', 4200), 300)
+  }
+
+  /** 清除緩存後重新整理畫面，保留目前的文字大小與外觀設定 */
+  function reloadAfterClear(cleared) {
+    const p = new URLSearchParams({ cleared: String(cleared), s: JSON.stringify(settings.value) })
+    location.replace(location.pathname + location.search + '#' + p.toString())
+    location.reload()
+  }
+
   watch(
     settings,
     (s) => {
@@ -60,5 +89,5 @@ export const useUiStore = defineStore('ui', () => {
   const ok = (text) => toast(text, 'ok')
   const error = (err) => toast(typeof err === 'string' ? err : err?.message || String(err), 'error', 6000)
 
-  return { page, params, toasts, settings, go, toast, ok, error }
+  return { page, params, toasts, settings, go, toast, ok, error, reloadAfterClear }
 })

@@ -219,3 +219,16 @@ pub async fn import_project_zip(app: AppHandle, state: State<'_, AppState>) -> A
     let name = storage::import_project_zip(&state.root()?, &path)?;
     Ok(Some(name))
 }
+
+/// 清除暫存：刪除殘留暫存檔並清除 WebView 的瀏覽快取；不會動到任何庫存資料與備份。
+/// 回傳清除的暫存檔數量。前端接著重新整理畫面，所有資料重新從檔案讀取。
+#[tauri::command]
+pub async fn clear_cache(window: tauri::WebviewWindow, state: State<'_, AppState>) -> AppResult<usize> {
+    let removed = {
+        let _q = state.queue();
+        storage::clear_temp_files(&state.root()?)?
+    };
+    // 瀏覽快取清除失敗不影響資料，忽略錯誤
+    let _ = window.clear_all_browsing_data();
+    Ok(removed)
+}

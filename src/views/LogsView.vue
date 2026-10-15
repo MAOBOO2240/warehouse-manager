@@ -50,14 +50,14 @@ async function exportCsv() {
   try {
     const range = from.value || to.value ? `_${from.value || '起'}至${to.value || '今'}` : ''
     const path = await saveCsv(
-      `${project.current}_異動流水帳${range}_${todayStamp()}.csv`,
+      `${project.current}_歷史紀錄${range}_${todayStamp()}.csv`,
       ['流水號', '時間', '類型', '品項', '存放地點', '異動數量', '異動後結存', '原因', '備註'],
       [...filtered.value].reverse().map((l) => [
         l.id, fmtTime(l.timestamp), actionLabel(l.action_type), l.product_name,
         locLabel(l.location_id), l.delta, l.balance_after, l.reason, l.note,
       ]),
     )
-    if (path) ui.ok(`已匯出 ${filtered.value.length} 筆流水帳：\n${path}`)
+    if (path) ui.ok(`已匯出 ${filtered.value.length} 筆歷史紀錄：\n${path}`)
   } catch (err) {
     ui.error(err)
   }
@@ -65,7 +65,7 @@ async function exportCsv() {
 </script>
 
 <template>
-  <PageHeader title="異動流水帳" hint="所有庫存異動的完整紀錄，不可修改或刪除">
+  <PageHeader title="歷史紀錄" hint="所有庫存異動的完整紀錄，不可修改或刪除">
     <button type="button" class="btn-primary" :disabled="!filtered.length" @click="exportCsv">匯出 CSV</button>
   </PageHeader>
 

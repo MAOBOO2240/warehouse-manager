@@ -293,6 +293,44 @@ pub fn import_project_zip(root: &Path, zip_path: &Path) -> AppResult<String> {
     Ok(name)
 }
 
+/// 清除暫存：移除 projects 內殘留的 .tmp 暫存檔、未完成匯入的 .import_* 暫存資料夾與寫入測試檔。
+/// 不會動到任何資料檔、backups/ 備份與 pending_tx.json（斷電補完用）。回傳清除的項目數。
+pub fn clear_temp_files(root: &Path) -> AppResult<usize> {
+    let mut removed = 0;
+    let entries = match fs::read_dir(root) {
+        Ok(e) => e,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        Err(e) => return Err(AppError::io("讀取專案資料夾失敗", &e)),
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        if path.is_dir() {
+            if name.starts_with(".import_") {
+                if fs::remove_dir_all(&path).is_ok() {
+                    removed += 1;
+                }
+                continue;
+            }
+            if name.starts_with('.') || name.starts_with('_') {
+                continue;
+            }
+            for sub in [path.clone(), path.join(BACKUPS_DIR)] {
+                let Ok(files) = fs::read_dir(&sub) else { continue };
+                for f in files.flatten() {
+                    let fp = f.path();
+                    if fp.is_file() && fp.extension().is_some_and(|x| x == "tmp") && fs::remove_file(&fp).is_ok() {
+                        removed += 1;
+                    }
+                }
+            }
+        } else if (name == ".write_test" || name.ends_with(".tmp")) && fs::remove_file(&path).is_ok() {
+            removed += 1;
+        }
+    }
+    Ok(removed)
+}
+
 pub fn file_path(dir: &Path, stem: &str) -> PathBuf {
     dir.join(format!("{stem}.json"))
 }
@@ -566,6 +604,26 @@ mod tests {
         assert_eq!(list_projects(&root).unwrap().len(), 2);
         let _ = fs::remove_file(zpath);
         let _ = fs::remove_file(bad);
+    }
+
+    #[test]
+    fn clear_temp_files_keeps_real_data() {
+        let root = temp_root("clear");
+        ensure_root(&root).unwrap();
+        let dir = project_dir(&root, DEFAULT_PROJECT).unwrap();
+        write_json_atomic(&dir, "products", &json!([{"id":"PROD-001","name":"a"}]), true).unwrap();
+        write_json_atomic(&dir, "products", &json!([{"id":"PROD-001","name":"b"}]), true).unwrap();
+        fs::write(dir.join("products.json.tmp"), b"x").unwrap();
+        fs::write(dir.join(PENDING_FILE.to_string() + ".json"), b"{}").unwrap();
+        fs::create_dir_all(root.join(".import_20260101_000000_1")).unwrap();
+        let backups_before = list_backups(&dir, "products").len();
+        assert!(backups_before >= 1);
+        assert_eq!(clear_temp_files(&root).unwrap(), 2);
+        assert!(!dir.join("products.json.tmp").exists());
+        assert!(dir.join(PENDING_FILE.to_string() + ".json").exists(), "斷電補完檔不可刪");
+        assert_eq!(read_json(&dir, "products").unwrap()[0]["name"], "b");
+        assert_eq!(list_backups(&dir, "products").len(), backups_before, "備份不可刪");
+        assert!(!root.join(".import_20260101_000000_1").exists());
     }
 
     #[test]

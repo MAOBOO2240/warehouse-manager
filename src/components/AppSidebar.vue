@@ -1,6 +1,8 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useUiStore } from '../stores/ui'
+import { api } from '../api'
+import ModalDialog from './ModalDialog.vue'
 
 const ui = useUiStore()
 
@@ -13,7 +15,7 @@ const ICONS = {
   logs: 'M8.5 6.5h11M8.5 12h11M8.5 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01',
 }
 const groups = [
-  { title: '總覽', items: [{ id: 'dashboard', label: '儀表板', tone: 'accent' }] },
+  { title: '總覽', items: [{ id: 'dashboard', label: '主頁面', tone: 'accent' }] },
   {
     title: '日常作業',
     items: [
@@ -25,7 +27,7 @@ const groups = [
     title: '查詢報表',
     items: [
       { id: 'inventory', label: '庫存清單', tone: 'violet' },
-      { id: 'logs', label: '異動流水帳', tone: 'amber' },
+      { id: 'logs', label: '歷史紀錄', tone: 'amber' },
     ],
   },
 ]
@@ -42,6 +44,20 @@ const themes = [
 ]
 
 const showSettings = ref(false)
+const confirmClear = ref(false)
+const clearing = ref(false)
+
+async function clearCache() {
+  clearing.value = true
+  try {
+    const removed = await api.clearCache()
+    ui.reloadAfterClear(removed)
+  } catch (err) {
+    ui.error(err)
+    clearing.value = false
+    confirmClear.value = false
+  }
+}
 const settingsEl = ref(null)
 
 function onDocDown(e) {
@@ -124,6 +140,15 @@ onBeforeUnmount(() => {
             @click="ui.settings.theme = t.id"
           >{{ t.label }}</button>
         </div>
+        <div class="mt-4 mb-2 text-[13px] font-semibold text-mute">維護</div>
+        <button
+          type="button"
+          class="pill w-full gap-2"
+          @click="confirmClear = true; showSettings = false"
+        >
+          <svg viewBox="0 0 24 24" class="h-4 w-4 text-safety" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12M9 7V4.5h6V7" /></svg>
+          清除緩存
+        </button>
       </div>
       <button
         type="button"
@@ -141,4 +166,23 @@ onBeforeUnmount(() => {
       </button>
     </div>
   </nav>
+
+  <ModalDialog v-if="confirmClear" title="清除緩存" subtitle="不會刪除任何資料" tone="safety" :closable="!clearing" @close="confirmClear = false">
+    <template #icon>
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12M9 7V4.5h6V7" /></svg>
+    </template>
+    <div class="tone-card text-[14.5px] leading-relaxed">
+      <p>將執行以下動作：</p>
+      <ul class="mt-2 list-disc space-y-1 pl-5 text-[13.5px] text-ink-2">
+        <li>刪除 projects 資料夾內殘留的暫存檔（.tmp）</li>
+        <li>清除程式畫面的瀏覽快取</li>
+        <li>重新整理畫面，所有資料重新從檔案讀取</li>
+      </ul>
+      <p class="mt-3 text-[13px] text-ink-2">品項、庫存、歷史紀錄、註記與 .bak 備份都不會受影響；文字大小與外觀設定會保留。</p>
+    </div>
+    <template #footer>
+      <button type="button" class="btn-ghost" :disabled="clearing" @click="confirmClear = false">取消</button>
+      <button type="button" class="btn-primary" :disabled="clearing" @click="clearCache">{{ clearing ? '清除中…' : '確認清除' }}</button>
+    </template>
+  </ModalDialog>
 </template>

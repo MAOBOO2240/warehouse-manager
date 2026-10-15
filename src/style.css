@@ -363,3 +363,22 @@ body.is-sorting * {
     background: rgb(255 255 255 / 0.22);
   }
 }
+
+@layer components {
+  /* ---- 庫存清單：存放地點分區標題 ---- */
+  .loc-head {
+    background: linear-gradient(180deg, color-mix(in oklab, var(--color-violet) 14%, var(--color-panel)), color-mix(in oklab, var(--color-violet) 5%, var(--color-panel)));
+    border-bottom: 1px solid color-mix(in oklab, var(--color-violet) 22%, var(--color-line));
+    transition: filter 0.15s;
+  }
+  .loc-head:hover {
+    filter: brightness(1.06);
+  }
+  .loc-pin {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full;
+    color: var(--color-violet);
+    background: color-mix(in oklab, var(--color-violet) 18%, transparent);
+    corner-shape: round;
+  }
+}
+

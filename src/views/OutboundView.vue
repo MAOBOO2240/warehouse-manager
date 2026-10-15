@@ -57,8 +57,6 @@ async function onSelect(sel) {
   const p = products.get(sel.id)
   // 自動帶入第一次入庫的數量
   qtyText.value = p?.first_qty > 0 ? String(p.first_qty) : ''
-  const list = stock.rowsOfProduct(sel.id)
-  if (list.length) location.value = list[0].location_id
 }
 
 function onClear() {
@@ -115,7 +113,8 @@ async function submit() {
         <div v-else-if="!rows.length" class="rounded-2xl bg-signal-soft px-4 py-3.5 text-[13px] text-signal">
           此品項目前沒有庫存
         </div>
-        <div v-else class="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto pr-1">
+        <p v-else-if="location === null" class="-mt-1 mb-2 pl-1 text-[12.5px] text-mute">請點選要出庫的存放地點</p>
+        <div v-if="productId && rows.length" class="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto pr-1">
           <button
             v-for="r in rows"
             :key="r.location_id"

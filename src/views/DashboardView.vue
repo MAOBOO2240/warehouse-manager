@@ -37,7 +37,7 @@ const recent = computed(() => stock.logs.slice(-10).reverse())
 </script>
 
 <template>
-  <PageHeader title="儀表板" hint="目前專案的庫存概況">
+  <PageHeader title="主頁面" hint="目前專案的庫存概況">
     <button type="button" class="btn-go" @click="ui.go('inbound')">入庫</button>
     <button type="button" class="btn-primary" @click="ui.go('outbound')">出庫/損壞</button>
   </PageHeader>
@@ -77,7 +77,7 @@ const recent = computed(() => stock.logs.slice(-10).reverse())
         type="button"
         class="w-full py-3 text-[13.5px] font-semibold text-accent hover:bg-hover"
         @click="ui.go('logs')"
-      >查看全部異動流水帳</button>
+      >查看全部歷史紀錄</button>
     </div>
   </section>
 </template>

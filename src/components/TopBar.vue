@@ -136,7 +136,7 @@ async function exportZip() {
       <div class="text-[14.5px] leading-relaxed">
         <p>確定要刪除專案「<strong>{{ project.current }}</strong>」嗎？</p>
         <p class="mt-2 text-[13px] text-ink-2">
-          此專案的品項、庫存與異動流水帳都會從系統中移除。資料夾會移到 projects 內的「_已刪除專案」，必要時仍可手動救回。
+          此專案的品項、庫存與歷史紀錄都會從系統中移除。資料夾會移到 projects 內的「_已刪除專案」，必要時仍可手動救回。
         </p>
       </div>
     </div>

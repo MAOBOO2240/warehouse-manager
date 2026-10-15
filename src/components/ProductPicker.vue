@@ -77,7 +77,13 @@ defineExpose({ focus })
   <div>
     <label class="field-label">{{ label }}</label>
 
-    <div v-if="selected" class="flex items-center gap-3 rounded-2xl bg-accent-soft px-4 py-3 ring-2 ring-accent/50">
+    <button
+      v-if="selected"
+      type="button"
+      class="group flex w-full items-center gap-3 rounded-2xl bg-accent-soft px-4 py-3 text-left ring-2 ring-accent/50 transition-shadow hover:ring-accent"
+      title="點一下更換品項"
+      @click="clear"
+    >
       <div class="min-w-0 flex-1">
         <div class="truncate text-[15px] font-semibold">{{ selected.name }}</div>
         <div class="mt-0.5 text-[12.5px] text-mute">
@@ -85,8 +91,11 @@ defineExpose({ focus })
           <span v-else>全部庫存 <span class="num">{{ fmtInt(stock.total(selected.id)) }}</span></span>
         </div>
       </div>
-      <button type="button" class="btn-ghost btn-sm" @click="clear">更換</button>
-    </div>
+      <span class="flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-accent opacity-70 transition-opacity group-hover:opacity-100">
+        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13M13.5 4.5 17 8l-3.5 3.5M20 16H7M10.5 12.5 7 16l3.5 3.5" /></svg>
+        點一下更換
+      </span>
+    </button>
 
     <div v-else class="relative">
       <input

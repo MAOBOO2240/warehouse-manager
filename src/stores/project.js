@@ -11,7 +11,7 @@ export const FILE_LABELS = {
   products: '品項清單 products.json',
   locations: '存放地點 locations.json',
   inventory: '即時庫存 inventory.json',
-  logs: '異動流水帳 logs.json',
+  logs: '歷史紀錄 logs.json',
   remarks: '庫存註記 remarks.json',
   row_order: '庫存清單排列順序 row_order.json',
 }

@@ -40,4 +40,5 @@ export const api = {
   exportTextFile: (defaultName, content) => call('export_text_file', { defaultName, content }),
   exportProjectZip: (project) => call('export_project_zip', { project }),
   importProjectZip: () => call('import_project_zip'),
+  clearCache: () => call('clear_cache'),
 }
