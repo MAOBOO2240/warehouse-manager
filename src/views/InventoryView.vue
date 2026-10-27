@@ -142,16 +142,18 @@ function cancelRemark() {
   editing.value = ''
 }
 
-/* ---- 表格的寬度：太窄時（大字、小視窗）先收起「最後異動」欄，品項名稱不會被擠成兩行 ---- */
+/* ---- 表格的寬度：太窄時（大字、小視窗）先收起「最後異動」欄（數量上滑鼠停一下看得到），
+   不用左右拖、品項名稱也不會被擠成兩行；真的放不下（最小視窗＋大字＋有存放地點）才左右捲動 ---- */
 const scroller = ref(null)
 const narrow = ref(false)
+const minTableW = computed(() => (showLocCol.value ? 760 : 660))
 let ro = null
 function watchWidth(el) {
   ro?.disconnect()
   if (!el || typeof ResizeObserver === 'undefined') return
   // clientWidth 和欄寬一樣是未縮放的 CSS px（設定裡的文字大小會整體縮放畫面）
   ro = new ResizeObserver(() => {
-    narrow.value = el.clientWidth < 940 && showLocCol.value
+    narrow.value = el.clientWidth < 940
   })
   ro.observe(el)
 }
@@ -418,7 +420,7 @@ async function exportCsv() {
   </div>
 
   <div v-else ref="scroller" class="panel overflow-x-auto">
-    <table ref="tableEl" class="table-base min-w-[840px] table-fixed text-[16px]">
+    <table ref="tableEl" class="table-base table-fixed text-[16px]" :style="{ minWidth: `${minTableW}px` }">
       <colgroup>
         <col class="w-11" />
         <col />
