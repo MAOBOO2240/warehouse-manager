@@ -88,7 +88,7 @@ defineExpose({ focus })
         <div class="truncate text-[15px] font-semibold">{{ selected.name }}</div>
         <div class="mt-0.5 text-[12.5px] text-mute">
           <span v-if="selected.isNew" class="font-semibold text-go">新品項，確認後自動建立</span>
-          <span v-else>全部庫存 <span class="num">{{ fmtInt(stock.total(selected.id)) }}</span></span>
+          <span v-else>全部庫存 <span class="num">{{ fmtInt(stock.total(selected.id)) }}</span> 件</span>
         </div>
       </div>
       <span class="flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-accent opacity-70 transition-opacity group-hover:opacity-100">
@@ -136,7 +136,7 @@ defineExpose({ focus })
             <template v-else>
               <span class="min-w-0 flex-1 truncate">{{ opt.product.name }}</span>
               <span class="num text-[13px]" :class="stock.total(opt.product.id) ? 'text-ink' : 'text-mute'">
-                {{ stock.total(opt.product.id) ? fmtInt(stock.total(opt.product.id)) : '無庫存' }}
+                {{ stock.total(opt.product.id) ? `${fmtInt(stock.total(opt.product.id))} 件` : '無庫存' }}
               </span>
             </template>
           </button>

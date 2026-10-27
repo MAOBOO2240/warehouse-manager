@@ -3,8 +3,11 @@
 
 mod commands;
 mod engine;
+mod update;
 
 fn main() {
+    // 上次更新留下的舊執行檔，開啟時刪掉
+    update::cleanup();
     // 啟動時於 .exe 同層建立 projects/ 與預設專案；失敗時交由前端顯示原因
     let root = engine::storage::projects_root_from_exe().and_then(|root| {
         engine::storage::ensure_root(&root)?;
@@ -28,6 +31,9 @@ fn main() {
             commands::export_project_zip,
             commands::import_project_zip,
             commands::clear_cache,
+            update::update_info,
+            update::update_check,
+            update::update_install,
         ])
         .run(tauri::generate_context!())
         .expect("無法啟動倉儲管理系統");

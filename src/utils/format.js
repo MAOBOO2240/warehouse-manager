@@ -3,7 +3,7 @@ import { analyzeQty } from './calc'
 export const ACTIONS = {
   INBOUND: { label: '入庫', tone: 'go' },
   OUTBOUND: { label: '出貨', tone: 'steel' },
-  TRANSFER: { label: '移動地點', tone: 'steel' },
+  TRANSFER: { label: '移動地點', tone: 'violet' },
   ADJUST_PROFIT: { label: '盤盈', tone: 'go' },
   ADJUST_LOSS: { label: '盤虧', tone: 'signal' },
   SCRAP: { label: '報廢', tone: 'signal' },
@@ -15,6 +15,7 @@ export const TONE_CLASS = {
   steel: 'bg-accent-soft text-accent',
   mute: 'bg-raised text-ink-2',
   signal: 'bg-signal-soft text-signal',
+  violet: 'bg-violet-soft text-violet',
 }
 
 /** 目前操作介面使用的異動類型（流水帳篩選用） */

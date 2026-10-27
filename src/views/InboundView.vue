@@ -102,7 +102,7 @@ async function submit() {
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="field-label" for="in-qty">數量</label>
-          <input id="in-qty" ref="qtyInput" v-model="qtyText" class="field num text-lg" placeholder="可輸入算式，如 12*5" />
+          <input id="in-qty" ref="qtyInput" v-model="qtyText" class="field num h-12 text-lg" placeholder="可輸入算式，如 12*5" />
           <QtyHint :text="qtyText" class="mt-1 pl-1">
             <template v-if="productId && products.get(productId)?.first_qty > 0" #default>
               <p class="text-[12.5px] text-mute">已帶入第一次入庫的數量</p>
@@ -111,7 +111,7 @@ async function submit() {
         </div>
         <div>
           <label class="field-label" for="in-note">備註</label>
-          <input id="in-note" v-model="note" class="field" placeholder="可不填" />
+          <input id="in-note" v-model="note" class="field h-12" placeholder="可不填" />
         </div>
       </div>
 

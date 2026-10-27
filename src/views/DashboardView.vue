@@ -65,7 +65,7 @@ const recent = computed(() => stock.logs.slice(-10).reverse())
           <div class="min-w-0 flex-1">
             <div class="truncate text-[14px]">{{ l.product_name }}</div>
             <div class="text-[12px] text-mute">
-              <span class="num">{{ fmtTime(l.timestamp) }}</span>・{{ locLabel(l.location_id) }}
+              <span class="num">{{ fmtTime(l.timestamp) }}</span><template v-if="l.location_id">・{{ locLabel(l.location_id) }}</template>
               <span v-if="l.action_type === 'DAMAGE'">・{{ l.reason }}</span>
             </div>
           </div>

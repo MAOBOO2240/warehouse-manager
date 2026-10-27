@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import PageHeader from '../components/PageHeader.vue'
 import QtyHint from '../components/QtyHint.vue'
 import ProductPicker from '../components/ProductPicker.vue'
@@ -52,18 +52,38 @@ const canSubmit = computed(
 )
 const verb = computed(() => (action.value === 'SHIP' ? '出貨' : '登記損壞'))
 
+// 預設數量：第一次入庫的數量，但不超過選好的存放地點現有的數量（不會一選好就是庫存不足）
+const qtyTouched = ref(false)
+function autoQty() {
+  const p = products.get(productId.value)
+  const first = p?.first_qty > 0 ? p.first_qty : 0
+  if (!first) return ''
+  if (location.value === null) return String(first)
+  return available.value > 0 ? String(Math.min(first, available.value)) : ''
+}
+watch(location, () => {
+  if (!qtyTouched.value) qtyText.value = autoQty()
+})
+
 async function onSelect(sel) {
   selected.value = sel
-  location.value = null
-  const p = products.get(sel.id)
-  // 自動帶入第一次入庫的數量
-  qtyText.value = p?.first_qty > 0 ? String(p.first_qty) : ''
+  qtyTouched.value = false
+  // 只放在一個地點（大部分沒有填地點的品項都是「未指定」一個）：直接選好，不用再點
+  const list = stock.rowsOfProduct(sel.id)
+  location.value = list.length === 1 ? list[0].location_id : null
+  qtyText.value = autoQty()
+  if (location.value !== null) {
+    await nextTick()
+    qtyInput.value?.focus()
+    qtyInput.value?.select()
+  }
 }
 
 function onClear() {
   selected.value = null
   location.value = null
   qtyText.value = ''
+  qtyTouched.value = false
 }
 
 async function pickReason(r) {
@@ -88,6 +108,7 @@ async function submit() {
     selected.value = null
     location.value = null
     qtyText.value = ''
+    qtyTouched.value = false
     note.value = ''
     otherReason.value = ''
   } catch (err) {
@@ -100,7 +121,7 @@ async function submit() {
 </script>
 
 <template>
-  <PageHeader title="出庫/損壞" hint="數量不可超過該存放地點的現有庫存，系統會在畫面與後端雙重阻擋" />
+  <PageHeader title="出庫/損壞" hint="選擇品項 → 選存放地點（只有一個地點時自動選好）→ 出貨或損壞 → 確認數量，按 Enter 或「確認」" />
 
   <div class="grid max-w-5xl grid-cols-5 gap-6">
     <form class="panel col-span-3 space-y-6 p-7" :style="{ '--tone': action === 'DAMAGE' ? 'var(--color-signal)' : 'var(--color-accent)' }" @submit.prevent="submit">
@@ -114,7 +135,7 @@ async function submit() {
         <div v-else-if="!rows.length" class="rounded-2xl bg-signal-soft px-4 py-3.5 text-[13px] text-signal">
           此品項目前沒有庫存
         </div>
-        <p v-else-if="location === null" class="-mt-1 mb-2 pl-1 text-[12.5px] text-mute">請點選要出庫的存放地點</p>
+        <p v-else-if="location === null" class="-mt-1 mb-2 pl-1 text-[12.5px] text-mute">這個品項放在好幾個地點，請點選要從哪裡出庫</p>
         <div v-if="productId && rows.length" class="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto pr-1">
           <button
             v-for="r in rows"
@@ -178,15 +199,16 @@ async function submit() {
             id="out-qty"
             ref="qtyInput"
             v-model="qtyText"
-            class="field num text-lg"
+            class="field num h-12 text-lg"
             :class="insufficient ? 'border-signal/70 bg-signal-soft focus:border-signal focus:ring-signal/20' : ''"
             placeholder="可輸入算式，如 12*5"
+            @input="qtyTouched = true"
           />
           <QtyHint :text="qtyText" class="mt-1 pl-1" />
         </div>
         <div>
           <label class="field-label" for="out-note">備註</label>
-          <input id="out-note" v-model="note" class="field" placeholder="可不填" />
+          <input id="out-note" v-model="note" class="field h-12" placeholder="可不填" />
         </div>
       </div>
 

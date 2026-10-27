@@ -1,6 +1,6 @@
 <script setup>
 // 庫存清單列上的快速操作：入庫 / 出庫 / 損壞 / 移到新地點
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import ModalDialog from './ModalDialog.vue'
 import ComboField from './ComboField.vue'
 import QtyHint from './QtyHint.vue'
@@ -11,7 +11,8 @@ import { fmtInt, locLabel, parseQty } from '../utils/format'
 
 const props = defineProps({
   mode: { type: String, required: true }, // 'in' | 'out' | 'damage' | 'move'
-  row: { type: Object, required: true }, // { product_id, name, location_id }
+  // { product_id, name, location_id, locs }：locs 是放在好幾個地點時的各地點（這時在視窗裡選地點）
+  row: { type: Object, required: true },
 })
 const emit = defineEmits(['close'])
 
@@ -28,13 +29,27 @@ const MODES = {
 const DAMAGE_REASONS = ['道具受損', '印刷錯誤', '其他']
 
 const cfg = computed(() => MODES[props.mode])
+const locs = props.row.locs && props.row.locs.length > 1 ? props.row.locs : null
+// 存放地點：只有一個地點時就是那裡；好幾個地點時要選（入庫預設數量最多的那裡，出庫、損壞、移動一定要自己選）
+const from = ref(locs ? (props.mode === 'in' ? locs[0].location_id : null) : props.row.location_id)
 // 移動地點：原本有地點時叫「改變地點」，未指定時叫「新增地點」（與庫存清單按鈕一致）
-const dialogTitle = computed(() => (props.mode === 'move' ? (props.row.location_id ? '改變地點' : '新增地點') : cfg.value.title))
+const dialogTitle = computed(() => (props.mode === 'move' ? (locs || props.row.location_id ? '改變地點' : '新增地點') : cfg.value.title))
 const product = computed(() => products.get(props.row.product_id))
-const available = computed(() => stock.qty(props.row.product_id, props.row.location_id))
+const available = computed(() => (from.value === null ? 0 : stock.qty(props.row.product_id, from.value)))
 
+// 預設數量：第一次入庫的數量；出庫、損壞時不超過這個地點現有的數量（不會一打開就是庫存不足）
 const firstQty = product.value?.first_qty > 0 ? product.value.first_qty : 0
-const qtyText = ref(props.mode === 'move' ? '' : firstQty ? String(firstQty) : '')
+const autoQty = () => {
+  if (props.mode === 'move' || !firstQty) return ''
+  if (props.mode === 'in') return String(firstQty)
+  if (from.value === null) return ''
+  return available.value > 0 ? String(Math.min(firstQty, available.value)) : ''
+}
+const qtyText = ref(autoQty())
+const qtyTouched = ref(false) // 使用者自己改過數量：換地點時不再自動帶入
+watch(from, () => {
+  if (!qtyTouched.value) qtyText.value = autoQty()
+})
 const note = ref('')
 const reason = ref('')
 const other = ref('')
@@ -51,40 +66,41 @@ const damageReason = computed(() => (reason.value === '其他' ? other.value.tri
 const problem = computed(() => {
   if (props.mode === 'move') {
     if (targetLoc.value.length > 50) return '存放地點請在 50 個字以內'
-    if (targetLoc.value === props.row.location_id) return '新地點不可與原地點相同'
+    if (from.value !== null && targetLoc.value === from.value) return '新地點不可與原地點相同'
   }
   return ''
 })
 const canSubmit = computed(() => {
-  if (busy.value || !qty.value || insufficient.value || problem.value) return false
+  if (busy.value || from.value === null || !qty.value || insufficient.value || problem.value) return false
   if (props.mode === 'damage' && !damageReason.value) return false
-  if (props.mode === 'move' && targetLoc.value === props.row.location_id) return false
+  if (props.mode === 'move' && targetLoc.value === from.value) return false
   return true
 })
-const otherLocations = computed(() => stock.knownLocations.filter((l) => l !== props.row.location_id))
+const otherLocations = computed(() => stock.knownLocations.filter((l) => l !== from.value))
 
 async function submit() {
   if (!canSubmit.value) return
   busy.value = true
   const base = { product_id: props.row.product_id, quantity: qty.value }
+  const at = from.value
   try {
     if (props.mode === 'in') {
-      await stock.apply({ kind: 'INBOUND', ...base, location_id: props.row.location_id, reason: '入庫', note: note.value })
+      await stock.apply({ kind: 'INBOUND', ...base, location_id: at, reason: '入庫', note: note.value })
     } else if (props.mode === 'out') {
-      await stock.apply({ kind: 'OUTBOUND', ...base, location_id: props.row.location_id, reason: '出貨', note: note.value })
+      await stock.apply({ kind: 'OUTBOUND', ...base, location_id: at, reason: '出貨', note: note.value })
     } else if (props.mode === 'damage') {
-      await stock.apply({ kind: 'DAMAGE', ...base, location_id: props.row.location_id, reason: damageReason.value, note: note.value })
+      await stock.apply({ kind: 'DAMAGE', ...base, location_id: at, reason: damageReason.value, note: note.value })
     } else {
       await stock.apply({
         kind: 'TRANSFER',
         product_id: props.row.product_id,
-        from_location_id: props.row.location_id,
+        from_location_id: at,
         to_location_id: targetLoc.value,
         quantity: qty.value,
         note: note.value,
       })
     }
-    const where = props.mode === 'move' ? `${locLabel(props.row.location_id)} → ${locLabel(targetLoc.value)}` : locLabel(props.row.location_id)
+    const where = props.mode === 'move' ? `${locLabel(at)} → ${locLabel(targetLoc.value)}` : locLabel(at)
     ui.ok(`已${cfg.value.verb}：${props.row.name} ${fmtInt(qty.value)} 件（${where}）`)
     emit('close')
   } catch (err) {
@@ -104,6 +120,7 @@ async function pickReason(r) {
 
 onMounted(async () => {
   await nextTick()
+  if (from.value === null) return // 先選地點
   const el = props.mode === 'move' ? targetEl.value : qtyEl.value
   el?.focus()
   el?.select?.()
@@ -119,7 +136,26 @@ onMounted(async () => {
       <svg v-else viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M13.5 4.5 17 8l-3.5 3.5M20 16H7M10.5 12.5 7 16l3.5 3.5" /></svg>
     </template>
     <form class="space-y-5" @submit.prevent="submit">
-      <div class="tone-card flex items-center justify-between">
+      <div v-if="locs">
+        <label class="field-label">{{ mode === 'move' ? '從哪個地點移出' : mode === 'in' ? '放到哪個地點' : '從哪個地點' + cfg.verb }}</label>
+        <div class="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto pr-1">
+          <button
+            v-for="l in locs"
+            :key="l.location_id"
+            type="button"
+            class="pill justify-between px-4 py-2.5 text-left"
+            :class="from === l.location_id ? (mode === 'damage' ? 'pill-danger-on' : 'pill-on') : ''"
+            :style="from === l.location_id && mode !== 'damage' ? { background: 'var(--tone)' } : null"
+            :aria-pressed="from === l.location_id"
+            @click="from = l.location_id"
+          >
+            <span class="min-w-0 truncate text-[14px]" :class="l.location_id ? '' : 'italic opacity-80'">{{ locLabel(l.location_id) }}</span>
+            <span class="num ml-2 text-lg">{{ fmtInt(stock.qty(row.product_id, l.location_id)) }}</span>
+          </button>
+        </div>
+        <p v-if="from === null" class="mt-1.5 pl-1 text-[12.5px] text-mute">這個品項放在好幾個地點，請點選一個</p>
+      </div>
+      <div v-else class="tone-card flex items-center justify-between">
         <div>
           <div class="text-[12.5px] font-semibold text-ink-2">{{ mode === 'move' ? '原存放地點' : '存放地點' }}</div>
           <div class="mt-0.5 text-[16px] font-bold" :class="row.location_id ? '' : 'italic text-mute'">{{ locLabel(row.location_id) }}</div>
@@ -167,14 +203,15 @@ onMounted(async () => {
             id="qt-qty"
             ref="qtyEl"
             v-model="qtyText"
-            class="field num text-lg"
+            class="field num h-12 text-lg"
             :class="insufficient ? 'border-signal/70 bg-signal-soft' : ''"
             placeholder="可輸入算式，如 12*5"
+            @input="qtyTouched = true"
           />
         </div>
         <div>
           <label class="field-label" for="qt-note">備註</label>
-          <input id="qt-note" v-model="note" class="field" placeholder="可不填" />
+          <input id="qt-note" v-model="note" class="field h-12" placeholder="可不填" />
         </div>
       </div>
       <QtyHint :text="qtyText" class="-mt-2 pl-1" />

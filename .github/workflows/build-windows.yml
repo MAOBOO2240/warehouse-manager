@@ -1,11 +1,11 @@
-# 在 GitHub 雲端自動編譯 Windows 免安裝版 WarehouseManager.exe
-# 觸發：推送到 main/master、推送 v* 標籤，或在 Actions 頁面手動執行
+# 在 GitHub 雲端自動編譯 Windows 免安裝版 WarehouseManager.exe，並覆蓋發布 v1.0.0
+# （版本號固定 1.0.0，以編譯編號／commit 分新舊；程式開啟時會比對 commit 檢查更新）
+# 觸發：推送到 main（程式檔有改動時）、在 Actions 頁面手動執行，或由「Unpack source」解壓後呼叫
 name: Build Windows EXE
 
 on:
   push:
-    branches: [main, master]
-    tags: ['v*']
+    branches: [main]
     paths:
       - 'src/**'
       - 'src-tauri/**'
@@ -14,15 +14,15 @@ on:
       - 'index.html'
       - 'vite.config.js'
   workflow_dispatch:
-    inputs:
-      release_tag:
-        description: '要更新的既有 Release 標籤（例如 v1.0.0）；留空則只編譯'
-        required: false
-        default: ''
   workflow_call:
 
 permissions:
   contents: write
+
+# 同時有兩次編譯時，只留最新的一次（避免舊的蓋掉新的發行版本）
+concurrency:
+  group: build-windows
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -32,7 +32,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           # 由解壓流程呼叫時，要取得解壓後最新的提交
-          ref: ${{ startsWith(github.ref, 'refs/tags/') && github.ref || 'main' }}
+          ref: main
+
+      - name: 記下這次編譯的 commit 與編號（程式用來檢查更新）
+        shell: bash
+        run: |
+          echo "WM_BUILD_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "WM_BUILD_NO=${{ github.run_number }}" >> "$GITHUB_ENV"
 
       - name: 安裝 Node.js
         uses: actions/setup-node@v4
@@ -76,7 +82,11 @@ jobs:
           $exe = "src-tauri/target/release/warehouse-manager.exe"
           if (-not (Test-Path $exe)) { $exe = (Get-ChildItem src-tauri/target/release/*.exe | Select-Object -First 1).FullName }
           Copy-Item $exe out/WarehouseManager.exe
-          Get-Item out/WarehouseManager.exe | Select-Object Name, Length
+          # 新版本的雜湊值：程式自動更新時用來確認下載的檔案和這裡編譯出來的一模一樣
+          $hash = (Get-FileHash out/WarehouseManager.exe -Algorithm SHA256).Hash.ToLower()
+          Set-Content -Path out/WarehouseManager.sha256 -Value "$hash  WarehouseManager.exe" -NoNewline -Encoding ascii
+          Get-ChildItem out | Select-Object Name, Length
+          Get-Content out/WarehouseManager.sha256
 
       - name: 上傳 EXE（Actions 頁面可下載）
         uses: actions/upload-artifact@v4
@@ -85,20 +95,21 @@ jobs:
           path: out/WarehouseManager.exe
           if-no-files-found: error
 
-      - name: 建立 Release（僅限 v* 標籤）
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: out/WarehouseManager.exe
-
-      - name: 更新既有 Release（手動執行並指定標籤時）
-        if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
-        shell: pwsh
+      - name: 發布到 v1.0.0（覆蓋舊的）
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.release_tag }}
         run: |
-          # 標籤移到目前的提交，並以新編譯的 exe 取代 Release 附件（版本號不變）
-          git tag -f $env:TAG
-          git push -f origin "refs/tags/$env:TAG"
-          gh release upload $env:TAG out/WarehouseManager.exe --clobber
+          gh release delete v1.0.0 --cleanup-tag --yes || true
+          git push origin :refs/tags/v1.0.0 || true
+          gh release create v1.0.0 out/WarehouseManager.exe out/WarehouseManager.sha256 \
+            --latest \
+            --target "$WM_BUILD_SHA" \
+            --title "倉儲管理系統 v1.0.0（編譯 #${WM_BUILD_NO}）" \
+            --notes "Windows 10/11 免安裝版：下載 WarehouseManager.exe，放在可以寫入的資料夾（例如桌面上的新資料夾）直接執行。
+
+          最後更新：$(date -u '+%Y-%m-%d %H:%M UTC')（編譯 #${WM_BUILD_NO}，commit ${WM_BUILD_SHA::7}）
+
+          已經在用的電腦：開啟程式時會自動檢查新版本，按「立即更新」就好，資料不會受影響。
+
+          首次執行若出現 SmartScreen「Windows 已保護您的電腦」，請點「其他資訊」→「仍要執行」。"

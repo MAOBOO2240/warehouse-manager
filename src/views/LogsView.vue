@@ -15,6 +15,8 @@ const ui = useUiStore()
 const project = useProjectStore()
 
 const DISPLAY_LIMIT = 500
+// 從來沒有填過存放地點時，不顯示地點欄（全部都是「未指定」）
+const hasLoc = computed(() => stock.logs.some((l) => l.location_id))
 
 const type = ref('')
 const typeOptions = [{ value: '', label: '全部' }, ...ACTIVE_ACTIONS.map((key) => ({ value: key, label: ACTIONS[key].label }))]
@@ -76,13 +78,13 @@ async function exportCsv() {
       <label class="field-label" for="lg-type">操作類型</label>
       <SelectMenu id="lg-type" v-model="type" :options="typeOptions" title="操作類型" class="w-44" />
     </div>
-    <DateField id="lg-from" v-model="from" label="起始日期" class="w-56" />
-    <DateField id="lg-to" v-model="to" label="結束日期" class="w-56" />
-    <div class="min-w-64 flex-1">
-      <label class="field-label" for="lg-q">品項或存放地點</label>
+    <DateField id="lg-from" v-model="from" label="起始日期" class="w-48" />
+    <DateField id="lg-to" v-model="to" label="結束日期" class="w-48" />
+    <div class="min-w-52 flex-1">
+      <label class="field-label" for="lg-q">{{ hasLoc ? '品項或存放地點' : '品項、原因或備註' }}</label>
       <input id="lg-q" v-model="q" class="field rounded-full" placeholder="輸入關鍵字" />
     </div>
-    <button type="button" class="btn-ghost" @click="reset">清除條件</button>
+    <button type="button" class="btn-ghost mb-0.5" :disabled="!type && !from && !to && !q" @click="reset">清除條件</button>
   </div>
 
   <div class="panel overflow-hidden">
@@ -93,7 +95,7 @@ async function exportCsv() {
             <th>時間</th>
             <th>類型</th>
             <th>品項</th>
-            <th>存放地點</th>
+            <th v-if="hasLoc">存放地點</th>
             <th class="text-right">異動</th>
             <th class="text-right">結存</th>
             <th>原因</th>
@@ -106,7 +108,7 @@ async function exportCsv() {
             <td class="num whitespace-nowrap">{{ fmtTime(l.timestamp) }}</td>
             <td><ActionBadge :type="l.action_type" /></td>
             <td>{{ l.product_name }}</td>
-            <td :class="l.location_id ? '' : 'italic text-mute'">{{ locLabel(l.location_id) }}</td>
+            <td v-if="hasLoc" :class="l.location_id ? '' : 'italic text-mute'">{{ locLabel(l.location_id) }}</td>
             <td class="num text-right text-[15px]" :class="l.delta < 0 ? 'text-signal' : 'text-go'">{{ fmtDelta(l.delta) }}</td>
             <td class="num text-right">{{ fmtInt(l.balance_after) }}</td>
             <td class="max-w-56 truncate" :title="l.reason">{{ l.reason }}</td>
@@ -114,7 +116,7 @@ async function exportCsv() {
             <td class="num text-[12px] text-mute">{{ l.id }}</td>
           </tr>
           <tr v-if="!filtered.length">
-            <td colspan="9" class="py-10 text-center text-mute">{{ stock.logs.length ? '沒有符合條件的紀錄' : '尚無任何異動紀錄' }}</td>
+            <td :colspan="hasLoc ? 9 : 8" class="py-10 text-center text-mute">{{ stock.logs.length ? '沒有符合條件的紀錄' : '尚無任何異動紀錄' }}</td>
           </tr>
         </tbody>
       </table>

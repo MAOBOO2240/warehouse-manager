@@ -80,23 +80,37 @@ async function importZip() {
 }
 
 async function exportZip() {
+  busy.value = true
   try {
     const path = await project.exportZip()
     if (path) ui.ok(`專案備份已匯出：\n${path}`)
   } catch (err) {
     ui.error(err)
+  } finally {
+    busy.value = false
   }
+}
+
+/** 專案選單下方的管理動作 */
+function onAction(id) {
+  if (id === 'new') openNew()
+  else if (id === 'import') importZip()
+  else if (id === 'export') exportZip()
+  else if (id === 'delete') confirmDelete.value = true
 }
 </script>
 
 <template>
   <header class="flex shrink-0 items-center gap-2.5 px-7 pt-5 pb-1">
-    <label class="pl-1 text-[13px] font-semibold text-mute" for="project-select">目前專案</label>
-    <ProjectSwitcher :projects="project.projects" :current="project.current" :disabled="project.loading" @select="switchTo" />
-    <button type="button" class="btn-ghost btn-sm" @click="openNew">新增專案</button>
-    <button type="button" class="btn-ghost btn-sm text-signal" :disabled="!project.current" @click="confirmDelete = true">刪除專案</button>
-    <button type="button" class="btn-ghost btn-sm" :disabled="busy" title="選擇先前匯出的備份 ZIP，匯入成一個新專案" @click="importZip">匯入備份 (ZIP)</button>
-    <button type="button" class="btn-ghost btn-sm" :disabled="!project.current" @click="exportZip">匯出備份 (ZIP)</button>
+    <label class="pl-1 text-[13px] font-semibold whitespace-nowrap text-mute" for="project-select">目前專案</label>
+    <ProjectSwitcher
+      :projects="project.projects"
+      :current="project.current"
+      :disabled="project.loading"
+      :busy="busy"
+      @select="switchTo"
+      @action="onAction"
+    />
 
     <button
       v-if="project.readOnly"

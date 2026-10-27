@@ -5,11 +5,21 @@ import { useStockStore } from '../stores/stock'
 import { useProjectStore } from '../stores/project'
 import { locLabel, fmtInt } from '../utils/format'
 import { api } from '../api'
+import { useUpdateStore } from '../stores/update'
 import ModalDialog from './ModalDialog.vue'
 
 const ui = useUiStore()
 const stock = useStockStore()
 const project = useProjectStore()
+const update = useUpdateStore()
+
+// 設定裡的「版本」：有新版時按鈕直接變成「更新到新版本」
+function onUpdateClick() {
+  if (update.result?.has_update) {
+    showSettings.value = false
+    update.show = true
+  } else update.check(true)
+}
 
 /* ---- 庫存清單底下列出目前的存放地點（有庫存的），點選後只顯示該地點 ---- */
 const locCompare = (a, b) => (a === '') - (b === '') || a.localeCompare(b, 'zh-Hant', { numeric: true })
@@ -19,6 +29,8 @@ const locations = computed(() => {
   return [...m.keys()].sort(locCompare).map((loc) => ({ loc, count: m.get(loc) }))
 })
 const allCount = computed(() => locations.value.reduce((t, l) => t + l.count, 0))
+// 只有「未指定」一個地點時（沒有用到存放地點）不列出子選單
+const showLocs = computed(() => locations.value.some((l) => l.loc))
 
 function openInventory(loc = null) {
   ui.invLoc = loc
@@ -52,13 +64,13 @@ const ICONS = {
 const groups = [
   {
     title: '總覽',
-    items: [{ id: 'dashboard', label: '主頁面', tone: 'accent' }],
+    items: [{ id: 'dashboard', label: '主頁面', tone: 'slate' }],
   },
   {
     title: '日常作業',
     items: [
       { id: 'inbound', label: '入庫', tone: 'go' },
-      { id: 'outbound', label: '出庫/損壞', tone: 'signal' },
+      { id: 'outbound', label: '出庫/損壞', tone: 'accent' },
     ],
   },
   {
@@ -158,7 +170,7 @@ onBeforeUnmount(() => {
               </span>
               {{ item.label }}
               <svg
-                v-if="item.id === 'inventory' && ui.page === 'inventory' && locations.length"
+                v-if="item.id === 'inventory' && ui.page === 'inventory' && showLocs"
                 viewBox="0 0 24 24"
                 class="ml-auto h-4 w-4 shrink-0 opacity-80 transition-transform"
                 :class="ui.invListOpen ? '' : '-rotate-90'"
@@ -173,7 +185,7 @@ onBeforeUnmount(() => {
               </svg>
             </button>
             <!-- 庫存清單：存放地點子選單 -->
-            <div v-if="item.id === 'inventory' && ui.page === 'inventory' && ui.invListOpen && locations.length" class="nav-sub" :style="toneStyle(item.tone)" role="group" aria-label="存放地點">
+            <div v-if="item.id === 'inventory' && ui.page === 'inventory' && ui.invListOpen && showLocs" class="nav-sub max-h-[42vh] overflow-y-auto overscroll-contain" :style="toneStyle(item.tone)" role="group" aria-label="存放地點">
               <button
                 type="button"
                 class="nav-sub-item"
@@ -268,16 +280,26 @@ onBeforeUnmount(() => {
           </svg>
           清除緩存
         </button>
+        <div class="mt-4 mb-2 text-[13px] font-semibold text-mute">版本</div>
+        <div class="flex items-center gap-2 pl-1">
+          <span class="min-w-0 flex-1 truncate text-[13px] text-ink-2">
+            <span class="num">{{ update.info?.version || project.version }}</span><span v-if="update.info?.build">・編譯 #<span class="num">{{ update.info.build }}</span></span>
+          </span>
+          <button type="button" class="btn-ghost btn-sm" :class="update.result?.has_update ? 'text-accent' : ''" :disabled="update.checking || update.installing" @click="onUpdateClick">
+            {{ update.checking ? '檢查中…' : update.result?.has_update ? '更新到新版本' : '檢查更新' }}
+          </button>
+        </div>
       </div>
       <button
         type="button"
-        class="flex h-11 w-11 items-center justify-center rounded-full bg-raised text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+        class="relative flex h-11 w-11 items-center justify-center rounded-full bg-raised text-ink-2 transition-colors hover:bg-hover hover:text-ink"
         style="box-shadow: var(--gloss), var(--bubble-shadow)"
         :aria-expanded="showSettings"
-        aria-label="設定"
-        title="設定"
+        :aria-label="update.result?.has_update ? '設定（有新版本）' : '設定'"
+        :title="update.result?.has_update ? '設定（有新版本可以更新）' : '設定'"
         @click="showSettings = !showSettings"
       >
+        <span v-if="update.result?.has_update" class="absolute top-0.5 right-0.5 h-3 w-3 rounded-full bg-accent ring-2 ring-nav" aria-hidden="true" />
         <svg
           viewBox="0 0 24 24"
           class="h-5 w-5"

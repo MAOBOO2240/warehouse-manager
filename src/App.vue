@@ -4,6 +4,7 @@ import AppSidebar from './components/AppSidebar.vue'
 import TopBar from './components/TopBar.vue'
 import ToastHost from './components/ToastHost.vue'
 import IssuesDialog from './components/IssuesDialog.vue'
+import UpdateDialog from './components/UpdateDialog.vue'
 import DashboardView from './views/DashboardView.vue'
 import InboundView from './views/InboundView.vue'
 import OutboundView from './views/OutboundView.vue'
@@ -11,9 +12,11 @@ import InventoryView from './views/InventoryView.vue'
 import LogsView from './views/LogsView.vue'
 import { useProjectStore } from './stores/project'
 import { useUiStore } from './stores/ui'
+import { useUpdateStore } from './stores/update'
 
 const project = useProjectStore()
 const ui = useUiStore()
+const update = useUpdateStore()
 
 const views = {
   dashboard: DashboardView,
@@ -38,7 +41,12 @@ watch(
   },
 )
 
-onMounted(() => project.init())
+onMounted(async () => {
+  await project.init()
+  // 開啟程式時檢查一次更新（等畫面出來再查，不影響開啟速度；查不到就算了）
+  await update.loadInfo()
+  if (!project.fatal) setTimeout(() => update.check(false), 1500)
+})
 </script>
 
 <template>
@@ -62,5 +70,6 @@ onMounted(() => project.init())
   </div>
 
   <IssuesDialog v-if="showIssues && project.issues.length" @close="showIssues = false" />
+  <UpdateDialog v-if="update.show && !(showIssues && project.issues.length)" />
   <ToastHost />
 </template>

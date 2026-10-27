@@ -41,4 +41,8 @@ export const api = {
   exportProjectZip: (project) => call('export_project_zip', { project }),
   importProjectZip: () => call('import_project_zip'),
   clearCache: () => call('clear_cache'),
+  // 檢查更新
+  updateInfo: () => call('update_info'),
+  updateCheck: () => call('update_check'),
+  updateInstall: () => call('update_install'),
 }

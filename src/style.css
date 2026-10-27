@@ -31,6 +31,8 @@
   --color-violet-soft: #efe8ff;
   --color-amber: #d98600;
   --color-on-amber: #ffffff;
+  /* 主頁面：沉穩的藍灰色（藍色留給出庫） */
+  --color-slate: #4f6178;
   /* 下拉選單與彈出清單的底色 */
   --color-menu: #ffffff;
   /* 輸入框：明確外框＋與卡片不同的底色 */
@@ -73,6 +75,8 @@
   --color-violet-soft: #2a2145;
   --color-amber: #f5b329;
   --color-on-amber: #2a1d00;
+  --color-slate: #93a6bf;
+  --color-on-slate: #10161f;
   --color-menu: #22242a;
   --color-field: #121318;
   --color-field-line: #4d5260;
@@ -391,6 +395,24 @@ body.is-sorting * {
   }
   .nav-sub-count {
     @apply shrink-0 text-[12px] text-mute;
+  }
+
+  /* ---- 庫存清單每一列的操作：小膠囊，文字與淡底用該動作的顏色（--tone） ---- */
+  .act {
+    @apply inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[13px] font-semibold whitespace-nowrap transition-colors select-none active:translate-y-px;
+    corner-shape: round;
+    color: var(--tone);
+    background: color-mix(in oklab, var(--tone) 13%, transparent);
+  }
+  .act:hover {
+    background: color-mix(in oklab, var(--tone) 24%, transparent);
+  }
+  /* 放在好幾個地點的品項：地點欄顯示「N 個地點」 */
+  .loc-multi {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] font-semibold;
+    corner-shape: round;
+    color: var(--color-violet);
+    background: color-mix(in oklab, var(--color-violet) 13%, transparent);
   }
   .nav-sub-item.is-active .nav-sub-count {
     color: inherit;
