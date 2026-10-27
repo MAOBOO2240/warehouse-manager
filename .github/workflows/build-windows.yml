@@ -33,12 +33,16 @@ jobs:
         with:
           # 由解壓流程呼叫時，要取得解壓後最新的提交
           ref: main
+          # 要完整的提交紀錄才算得出編譯編號
+          fetch-depth: 0
 
       - name: 記下這次編譯的 commit 與編號（程式用來檢查更新）
         shell: bash
         run: |
           echo "WM_BUILD_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "WM_BUILD_NO=${{ github.run_number }}" >> "$GITHUB_ENV"
+          # 編號用 main 上的提交數：推送、手動執行或解壓流程呼叫都只會往上加
+          # （github.run_number 在解壓流程呼叫時是解壓流程自己的編號，會前後亂跳）
+          echo "WM_BUILD_NO=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
 
       - name: 安裝 Node.js
         uses: actions/setup-node@v4
