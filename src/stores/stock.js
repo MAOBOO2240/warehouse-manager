@@ -26,6 +26,9 @@ export const useStockStore = defineStore('stock', () => {
     return [...set].sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }))
   })
 
+  /** 這個專案有沒有用存放地點（都沒填過的專案，入出庫畫面就不顯示「未指定」這些字） */
+  const usesLocations = computed(() => knownLocations.value.length > 0)
+
   function qty(pid, loc) {
     return qtyMap.value.get(key(pid, loc ?? '')) || 0
   }
@@ -50,5 +53,5 @@ export const useStockStore = defineStore('stock', () => {
     return res.new_logs
   }
 
-  return { inventory, logs, qty, total, totalByProduct, knownLocations, rowsOfProduct, apply }
+  return { inventory, logs, qty, total, totalByProduct, knownLocations, usesLocations, rowsOfProduct, apply }
 })

@@ -77,6 +77,8 @@ const canSubmit = computed(() => {
   return true
 })
 const otherLocations = computed(() => stock.knownLocations.filter((l) => l !== from.value))
+// 沒有用存放地點的專案：入庫、出庫、損壞不顯示「存放地點：未指定」（移動地點時照樣顯示原地點）
+const showWhere = computed(() => props.mode === 'move' || !!props.row.location_id || stock.usesLocations)
 
 async function submit() {
   if (!canSubmit.value) return
@@ -100,8 +102,8 @@ async function submit() {
         note: note.value,
       })
     }
-    const where = props.mode === 'move' ? `${locLabel(at)} → ${locLabel(targetLoc.value)}` : locLabel(at)
-    ui.ok(`已${cfg.value.verb}：${props.row.name} ${fmtInt(qty.value)} 件（${where}）`)
+    const where = props.mode === 'move' ? `${locLabel(at)} → ${locLabel(targetLoc.value)}` : showWhere.value ? locLabel(at) : ''
+    ui.ok(`已${cfg.value.verb}：${props.row.name} ${fmtInt(qty.value)} 件${where ? `（${where}）` : ''}`)
     emit('close')
   } catch (err) {
     ui.error(err)
@@ -156,12 +158,13 @@ onMounted(async () => {
         <p v-if="from === null" class="mt-1.5 pl-1 text-[12.5px] text-mute">這個品項放在好幾個地點，請點選一個</p>
       </div>
       <div v-else class="tone-card flex items-center justify-between">
-        <div>
+        <div v-if="showWhere">
           <div class="text-[12.5px] font-semibold text-ink-2">{{ mode === 'move' ? '原存放地點' : '存放地點' }}</div>
           <div class="mt-0.5 text-[16px] font-bold" :class="row.location_id ? '' : 'italic text-mute'">{{ locLabel(row.location_id) }}</div>
         </div>
+        <div v-else class="text-[15px] font-semibold text-ink-2">現有庫存</div>
         <div class="text-right">
-          <div class="text-[12.5px] font-semibold text-ink-2">現有庫存</div>
+          <div v-if="showWhere" class="text-[12.5px] font-semibold text-ink-2">現有庫存</div>
           <div class="num text-[26px] leading-tight" :style="{ color: 'var(--tone)' }">{{ fmtInt(available) }}</div>
         </div>
       </div>
@@ -216,7 +219,7 @@ onMounted(async () => {
       </div>
       <QtyHint :text="qtyText" class="-mt-2 pl-1" />
       <div v-if="insufficient" class="rounded-2xl bg-signal-soft px-5 py-3 text-[14.5px] font-bold text-signal ring-2 ring-signal/50" role="alert">
-        庫存不足！此存放地點剩餘 {{ fmtInt(available) }} 件，不可{{ cfg.verb }} {{ fmtInt(qty) }} 件
+        庫存不足！{{ showWhere ? '此存放地點剩餘' : '目前只剩' }} {{ fmtInt(available) }} 件，不可{{ cfg.verb }} {{ fmtInt(qty) }} 件
       </div>
       <button type="submit" class="hidden" />
     </form>

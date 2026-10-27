@@ -66,7 +66,8 @@ async function submit() {
       reason: '入庫',
       note: note.value,
     })
-    ui.ok(`已入庫：${name} ${fmtInt(qty.value)} 件（${locLabel(loc.value)}）`)
+    const where = loc.value || stock.usesLocations ? `（${locLabel(loc.value)}）` : ''
+    ui.ok(`已入庫：${name} ${fmtInt(qty.value)} 件${where}`)
     selected.value = null
     location.value = ''
     qtyText.value = ''
@@ -123,10 +124,10 @@ async function submit() {
         v-if="selected"
         :before="before"
         :after="qty ? before + qty : null"
-        :caption="`${locLabel(loc)} 現有`"
+        :caption="loc || stock.usesLocations ? `${locLabel(loc)} 現有` : '現有'"
         unit="件"
       />
-      <div v-if="productId" class="panel p-5">
+      <div v-if="productId && stock.usesLocations" class="panel p-5">
         <h3 class="mb-2 text-[13px] font-semibold text-mute">此品項目前存放位置</h3>
         <ul v-if="stock.rowsOfProduct(productId).length" class="space-y-1.5">
           <li v-for="r in stock.rowsOfProduct(productId)" :key="r.location_id">

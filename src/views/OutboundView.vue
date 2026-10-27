@@ -104,7 +104,8 @@ async function submit() {
     } else {
       await stock.apply({ kind: 'DAMAGE', ...base, reason: finalReason.value })
     }
-    ui.ok(`已${verb.value}：${selected.value.name} ${fmtInt(qty.value)} 件（${locLabel(location.value)}）`)
+    const where = stock.usesLocations ? `（${locLabel(location.value)}）` : ''
+    ui.ok(`已${verb.value}：${selected.value.name} ${fmtInt(qty.value)} 件${where}`)
     selected.value = null
     location.value = null
     qtyText.value = ''
@@ -121,13 +122,22 @@ async function submit() {
 </script>
 
 <template>
-  <PageHeader title="出庫/損壞" hint="選擇品項 → 選存放地點（只有一個地點時自動選好）→ 出貨或損壞 → 確認數量，按 Enter 或「確認」" />
+  <PageHeader
+    title="出庫/損壞"
+    :hint="stock.usesLocations
+      ? '選擇品項 → 選存放地點（只有一個地點時自動選好）→ 出貨或損壞 → 確認數量，按 Enter 或「確認」'
+      : '選擇品項 → 出貨或損壞 → 確認數量，按 Enter 或「確認」'"
+  />
 
   <div class="grid max-w-5xl grid-cols-5 gap-6">
     <form class="panel col-span-3 space-y-6 p-7" :style="{ '--tone': action === 'DAMAGE' ? 'var(--color-signal)' : 'var(--color-accent)' }" @submit.prevent="submit">
       <ProductPicker ref="picker" :selected="selected" @select="onSelect" @clear="onClear" />
 
-      <div>
+      <!-- 沒有用存放地點的專案：不用選地點（都是「未指定」那一個），只在沒有庫存時提醒 -->
+      <div v-if="!stock.usesLocations && productId && !rows.length" class="rounded-2xl bg-signal-soft px-4 py-3.5 text-[13px] text-signal">
+        此品項目前沒有庫存
+      </div>
+      <div v-if="stock.usesLocations">
         <label class="field-label">存放地點</label>
         <div v-if="!productId" class="rounded-2xl bg-raised px-4 py-3.5 text-[13px] text-mute">
           先選擇品項，這裡會列出有庫存的存放地點
@@ -217,7 +227,7 @@ async function submit() {
         class="rounded-2xl bg-signal-soft px-5 py-3.5 text-[15px] font-bold text-signal ring-2 ring-signal/50"
         role="alert"
       >
-        庫存不足！此存放地點剩餘 {{ fmtInt(available) }} 件，不可{{ verb }} {{ fmtInt(qty) }} 件
+        庫存不足！{{ stock.usesLocations ? '此存放地點剩餘' : '目前只剩' }} {{ fmtInt(available) }} 件，不可{{ verb }} {{ fmtInt(qty) }} 件
       </div>
 
       <button
@@ -233,7 +243,7 @@ async function submit() {
         v-if="productId && location !== null"
         :before="available"
         :after="qty && !insufficient ? available - qty : null"
-        :caption="`${locLabel(location)} 現有`"
+        :caption="stock.usesLocations ? `${locLabel(location)} 現有` : '現有'"
         unit="件"
         :danger="insufficient"
       />
