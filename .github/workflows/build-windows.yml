@@ -43,6 +43,9 @@ jobs:
           # 編號用 main 上的提交數：推送、手動執行或解壓流程呼叫都只會往上加
           # （github.run_number 在解壓流程呼叫時是解壓流程自己的編號，會前後亂跳）
           echo "WM_BUILD_NO=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+          # 這次編譯的代號：同一個 commit 重新編譯（例如只換了更新權杖）時 commit 不變、代號會變，
+          # 程式比對發行版本說明裡的 build-id 就知道要更新
+          echo "WM_BUILD_ID=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
 
       - name: 安裝 Node.js
         uses: actions/setup-node@v4
@@ -73,10 +76,30 @@ jobs:
       - name: 建置前端
         run: npm run build
 
+      # 倉庫是私人的時候，程式要帶權杖才查得到新版本：到 Settings → Secrets and variables → Actions
+      # 新增 UPDATE_TOKEN（只給這個倉庫 Contents 唯讀的權杖）。倉庫是公開的就不用設定。
+      - name: 更新權杖狀態（只回報有沒有設定，不會顯示內容）
+        shell: bash
+        env:
+          WM_UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+          REPO_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          if [ -n "$WM_UPDATE_TOKEN" ]; then
+            echo "::notice title=更新權杖::已設定 UPDATE_TOKEN：這個版本會帶著權杖查詢新版本"
+          elif [ "$REPO_PRIVATE" = "true" ]; then
+            echo "::warning title=更新權杖::倉庫是私人的，但沒有設定 UPDATE_TOKEN：這個版本查不到新版本，無法自動更新（做法見 README 的「自動更新」）"
+          else
+            echo "::notice title=更新權杖::沒有設定 UPDATE_TOKEN：倉庫是公開的就不需要"
+          fi
+
       - name: 執行 Rust 單元測試（原子寫入、備份還原、負庫存阻擋）
+        env:
+          WM_UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: 編譯免安裝 EXE
+        env:
+          WM_UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
         run: npx tauri build --no-bundle
 
       - name: 整理輸出檔案
@@ -114,6 +137,29 @@ jobs:
 
           最後更新：$(date -u '+%Y-%m-%d %H:%M UTC')（編譯 #${WM_BUILD_NO}，commit ${WM_BUILD_SHA::7}）
 
-          已經在用的電腦：開啟程式時會自動檢查新版本，按「立即更新」就好，資料不會受影響。
+          已經在用的電腦：開啟程式時會自動檢查並更新到新版本（可在設定裡改成先詢問），資料不會受影響。
 
-          首次執行若出現 SmartScreen「Windows 已保護您的電腦」，請點「其他資訊」→「仍要執行」。"
+          首次執行若出現 SmartScreen「Windows 已保護您的電腦」，請點「其他資訊」→「仍要執行」。
+
+          build-id: ${WM_BUILD_ID}"
+
+      # 用和程式一樣的方式（有權杖就帶權杖，沒有就不登入）查一次剛發布的版本。
+      # 查不到只顯示警告、不會讓編譯失敗：代表已安裝的程式收不到這次更新，要先處理權杖或倉庫的公開設定。
+      - name: 確認已安裝的程式查得到這個版本
+        shell: bash
+        env:
+          WM_UPDATE_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+        run: |
+          auth=()
+          if [ -n "$WM_UPDATE_TOKEN" ]; then auth=(-H "Authorization: Bearer $WM_UPDATE_TOKEN"); fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "${auth[@]}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/v1.0.0" || true)
+          if [ "$code" = "200" ]; then
+            echo "::notice title=自動更新::檢查通過：已安裝的程式查得到這個版本，會自動更新"
+          elif [ "$code" = "404" ] || [ "$code" = "401" ]; then
+            echo "::warning title=自動更新::已安裝的程式查不到這個版本（GitHub 回應 ${code}）。倉庫是私人的話，請設定 UPDATE_TOKEN（並確認權杖沒有過期、對這個倉庫有 Contents 的讀取權限），或把倉庫改成公開"
+          else
+            # 403／429 多半是這台編譯主機的查詢次數用完了，不代表使用者的電腦查不到
+            echo "::notice title=自動更新::這次無法確認（GitHub 回應 ${code:-無}，可能是暫時限制查詢次數）。可以在已安裝的程式按「設定 → 檢查更新」確認"
+          fi
