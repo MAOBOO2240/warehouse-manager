@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "主視窗使用的基本權限",
+  "description": "主視窗使用的基本權限（set-theme：視窗標題列跟著程式的深色／淺色外觀）",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "core:window:allow-set-theme"]
 }

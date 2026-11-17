@@ -128,7 +128,7 @@ defineExpose({ focus })
             @mousemove="active = i"
           >
             <template v-if="opt.create">
-              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-go text-white" aria-hidden="true">
+              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-go text-on-go" aria-hidden="true">
                 <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14" /></svg>
               </span>
               <span class="flex-1 font-semibold text-go">新增品項「{{ opt.name }}」</span>

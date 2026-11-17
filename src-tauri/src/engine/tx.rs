@@ -1,12 +1,18 @@
-//! 庫存異動交易：入庫、出庫、調撥、盤點平倉、報廢、物品損壞。
+//! 庫存異動交易：入庫、出庫、調撥、盤點平倉、報廢、物品損壞、移除存放地點。
 //!
 //! 一筆交易的提交流程（run_transaction）：
 //!   1. 讀取商品、庫位、庫存、日誌，於記憶體中計算新庫存與新日誌
 //!   2. 任一庫位數量會小於 0 → 直接回傳 INSUFFICIENT_STOCK，不寫入任何檔案
 //!   3. 將「新庫存全貌 + 新增日誌」原子寫入 pending_tx.json（交易日誌）
-//!   4. 追加日誌 → 寫入庫存 → 刪除 pending_tx.json
+//!   4. 追加日誌 → 寫入庫存 → 寫入交易附帶的其他檔案 → 刪除 pending_tx.json
 //! 若在第 4 步中途斷電，下次開啟專案時 commit_pending() 會依 pending_tx.json 補完，
 //! 保證 inventory.json 與 logs.json 永遠一致。
+//!
+//! 移除存放地點（REMOVE_LOCATION）除了把該地點的庫存全部移走，還會一併更新三個檔案
+//! （寫在交易日誌的 files 裡，和庫存、日誌一起補完）：
+//!   - config.json 的 removed_locations 記下移除時間：歷史紀錄不可修改，仍會提到這個地點，
+//!     前端依這個時間把它從「已使用過的存放地點」中隱藏；之後再用同一個名稱入庫就會重新出現
+//!   - remarks.json、row_order.json 裡這個地點的註記與排列位置跟著搬到新地點
 
 use super::error::{AppError, AppResult};
 use super::storage::{self, file_path, read_array, write_json_atomic, PENDING_FILE};
@@ -98,6 +104,15 @@ pub enum TxRequest {
         #[serde(default)]
         note: String,
     },
+    /// 移除存放地點：這個地點的庫存全部移到 to_location_id（空白＝未指定），
+    /// 之後這個地點不再出現在清單與建議中
+    RemoveLocation {
+        location_id: String,
+        #[serde(default)]
+        to_location_id: String,
+        #[serde(default)]
+        note: Option<String>,
+    },
 }
 
 #[derive(Serialize, Debug)]
@@ -106,7 +121,18 @@ pub struct TxOutcome {
     pub new_logs: Vec<LogEntry>,
     /// 首次入庫時會記錄商品的 first_qty，此時回傳更新後的商品清單
     pub products: Option<Vec<Value>>,
+    /// 移除存放地點時一併更新的設定（removed_locations）；其他交易為 None
+    pub config: Option<Value>,
+    /// 移除存放地點時跟著搬的註記；其他交易為 None
+    pub remarks: Option<Value>,
+    /// 移除存放地點時跟著搬的排列順序；其他交易為 None
+    pub row_order: Option<Value>,
 }
+
+/// 交易可以附帶更新的檔案（寫在交易日誌的 files 裡）
+const SIDE_FILES: [&str; 3] = ["config", "remarks", "row_order"];
+/// 註記的長度上限（和 validate_master_write 一致）
+const REMARK_MAX: usize = 200;
 
 fn text(v: &Option<String>) -> String {
     v.as_deref().unwrap_or("").trim().to_string()
@@ -384,7 +410,7 @@ pub fn compute(
         } => {
             check_qty(*quantity)?;
             if from_location_id == to_location_id {
-                return Err(AppError::invalid("來源庫位與目的庫位不可相同"));
+                return Err(AppError::invalid("新地點不可與原地點相同"));
             }
             let name = ctx.product_name(product_id)?;
             ctx.ensure_location(from_location_id)?;
@@ -392,14 +418,15 @@ pub fn compute(
             let from_before = qty_at(inventory, product_id, from_location_id);
             if from_before < *quantity {
                 return Err(AppError::insufficient(format!(
-                    "庫存不足！來源庫位 {from_location_id} 剩餘 {from_before} 件，不可調撥 {quantity} 件"
+                    "庫存不足！「{}」剩餘 {from_before} 件，不可移動 {quantity} 件",
+                    loc_name(from_location_id)
                 )));
             }
             let from_after = from_before - quantity;
             let to_after = qty_at(inventory, product_id, to_location_id)
                 .checked_add(*quantity)
                 .filter(|v| *v <= MAX_QTY)
-                .ok_or_else(|| AppError::invalid("調撥後數量過大"))?;
+                .ok_or_else(|| AppError::invalid("移過去之後數量過大"))?;
             set_qty(inventory, product_id, from_location_id, from_after, now);
             set_qty(inventory, product_id, to_location_id, to_after, now);
             let note = text(note);
@@ -466,6 +493,63 @@ pub fn compute(
             if logs.out.is_empty() {
                 return Err(AppError::invalid("實盤數量與帳面一致，沒有需要平倉的項目"));
             }
+        }
+        TxRequest::RemoveLocation {
+            location_id,
+            to_location_id,
+            note,
+        } => {
+            if location_id.is_empty() {
+                return Err(AppError::invalid("「未指定」不是存放地點，無法移除"));
+            }
+            if location_id == to_location_id {
+                return Err(AppError::invalid("不可移到正要移除的地點"));
+            }
+            ctx.ensure_location(to_location_id)?;
+            let note = text(note);
+            // 這個地點所有有庫存的品項，依 inventory 原本的順序逐一移走（每個品項記一出一入）
+            let moving: Vec<(String, i64)> = inventory
+                .iter()
+                .filter(|r| r.location_id == *location_id && r.quantity > 0)
+                .map(|r| (r.product_id.clone(), r.quantity))
+                .collect();
+            for (pid, qty) in &moving {
+                // 品項已不在清單裡（舊資料）時仍可移走，名稱以編號代替
+                let name = ctx
+                    .products
+                    .get(pid.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| pid.clone());
+                let to_after = qty_at(inventory, pid, to_location_id)
+                    .checked_add(*qty)
+                    .filter(|v| *v <= MAX_QTY)
+                    .ok_or_else(|| AppError::invalid(format!("「{name}」移過去之後數量過大")))?;
+                set_qty(inventory, pid, location_id, 0, now);
+                set_qty(inventory, pid, to_location_id, to_after, now);
+                logs.push(
+                    "TRANSFER",
+                    pid,
+                    &name,
+                    location_id,
+                    -qty,
+                    0,
+                    format!("移除存放地點：移至 {}", loc_name(to_location_id)),
+                    note.clone(),
+                );
+                logs.push(
+                    "TRANSFER",
+                    pid,
+                    &name,
+                    to_location_id,
+                    *qty,
+                    to_after,
+                    format!("移除存放地點：由 {} 移入", loc_name(location_id)),
+                    note.clone(),
+                );
+            }
+            // 舊資料可能留有數量為 0 的列，一併清掉；沒有庫存的地點不寫任何日誌。
+            // 數量是負的列（資料異常）不在這裡默默刪掉，留給下面「不允許負數」那一關中止交易
+            inventory.retain(|r| r.location_id != *location_id || r.quantity < 0);
         }
     }
 
@@ -541,7 +625,36 @@ pub fn run_transaction(dir: &Path, tx: &TxRequest) -> AppResult<TxOutcome> {
     let today = Local::now().format("%Y%m%d").to_string();
     let new_logs = compute(tx, &products, &locations, &mut inventory, &logs, &now, &today)?;
 
-    let journal = json!({ "inventory": inventory, "new_logs": new_logs });
+    let mut journal = json!({ "inventory": inventory, "new_logs": new_logs });
+    // 移除存放地點：設定、註記、排列順序跟著更新，和庫存一起寫進交易日誌（中途斷電也會補完）
+    let mut side = serde_json::Map::new();
+    if let TxRequest::RemoveLocation {
+        location_id,
+        to_location_id,
+        ..
+    } = tx
+    {
+        let mut config = match storage::read_json(dir, "config")? {
+            Value::Object(map) => map,
+            _ => return Err(AppError::corrupt("config.json 內容格式不正確")),
+        };
+        mark_location_removed(&mut config, location_id, &now);
+        side.insert("config".into(), Value::Object(config));
+        // 註記與排列順序讀不到時不擋下移除（那兩個檔維持原狀）
+        if let Ok(remarks) = read_array(dir, "remarks") {
+            side.insert(
+                "remarks".into(),
+                Value::Array(move_remarks(remarks, location_id, to_location_id)),
+            );
+        }
+        if let Ok(order) = read_array(dir, "row_order") {
+            side.insert(
+                "row_order".into(),
+                Value::Array(move_row_order(order, location_id, to_location_id)),
+            );
+        }
+        journal["files"] = Value::Object(side.clone());
+    }
     write_json_atomic(dir, PENDING_FILE, &journal, false)?;
     commit_pending(dir)?;
 
@@ -567,7 +680,96 @@ pub fn run_transaction(dir: &Path, tx: &TxRequest) -> AppResult<TxOutcome> {
         inventory,
         new_logs,
         products: updated_products,
+        config: side.remove("config"),
+        remarks: side.remove("remarks"),
+        row_order: side.remove("row_order"),
     })
+}
+
+/// 在設定裡記下「這個存放地點在什麼時候被移除」。
+/// 歷史紀錄不可修改，仍會提到這個地點；前端只把「移除之後才發生的異動」算成用過這個地點。
+fn mark_location_removed(config: &mut serde_json::Map<String, Value>, location: &str, now: &str) {
+    let entry = config
+        .entry("removed_locations")
+        .or_insert_with(|| Value::Object(serde_json::Map::new()));
+    if !entry.is_object() {
+        *entry = Value::Object(serde_json::Map::new());
+    }
+    if let Some(map) = entry.as_object_mut() {
+        map.insert(location.to_string(), Value::String(now.to_string()));
+    }
+}
+
+/// 註記跟著庫存搬到新地點：新地點沒有註記就直接搬過去；兩邊都有且內容不同時接在後面。
+/// 接起來會超過長度上限時不硬湊：新地點保留原本的註記，舊的那一則原封不動留在檔案裡（不刪使用者寫的字）。
+fn move_remarks(remarks: Vec<Value>, from: &str, to: &str) -> Vec<Value> {
+    let (moving, mut kept): (Vec<Value>, Vec<Value>) = remarks
+        .into_iter()
+        .partition(|r| str_field(r, "location_id") == from);
+    let mut left_behind = Vec::new();
+    for m in moving {
+        let pid = str_field(&m, "product_id").to_string();
+        let text = str_field(&m, "remark").trim().to_string();
+        if pid.is_empty() || text.is_empty() {
+            continue;
+        }
+        let dest = kept
+            .iter_mut()
+            .find(|r| str_field(r, "product_id") == pid && str_field(r, "location_id") == to);
+        match dest.and_then(Value::as_object_mut) {
+            Some(obj) => {
+                let old = obj
+                    .get("remark")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .trim()
+                    .to_string();
+                if old.is_empty() {
+                    obj.insert("remark".into(), Value::String(text));
+                } else if old != text {
+                    let joined = format!("{old}；{text}");
+                    if joined.chars().count() <= REMARK_MAX {
+                        obj.insert("remark".into(), Value::String(joined));
+                    } else {
+                        left_behind.push(m);
+                    }
+                }
+            }
+            None => kept.push(json!({ "product_id": pid, "location_id": to, "remark": text })),
+        }
+    }
+    kept.extend(left_behind);
+    kept
+}
+
+/// 排列順序跟著搬：被移除地點的列換成新地點，位置不變；新地點本來就有這個品項時，舊的那一筆直接拿掉。
+fn move_row_order(order: Vec<Value>, from: &str, to: &str) -> Vec<Value> {
+    let at_dest: HashSet<String> = order
+        .iter()
+        .filter(|r| str_field(r, "location_id") == to)
+        .map(|r| str_field(r, "product_id").to_string())
+        .collect();
+    let mut seen = HashSet::new();
+    let mut out = Vec::with_capacity(order.len());
+    for r in order {
+        let pid = str_field(&r, "product_id").to_string();
+        let loc = str_field(&r, "location_id").to_string();
+        if pid.is_empty() {
+            continue;
+        }
+        let loc = if loc == from {
+            if at_dest.contains(&pid) {
+                continue;
+            }
+            to.to_string()
+        } else {
+            loc
+        };
+        if seen.insert((pid.clone(), loc.clone())) {
+            out.push(json!({ "product_id": pid, "location_id": loc }));
+        }
+    }
+    out
 }
 
 /// 若有未完成的交易日誌就補完。回傳是否有補完任何交易。可重複執行（冪等）。
@@ -606,6 +808,20 @@ pub fn commit_pending(dir: &Path) -> AppResult<bool> {
         write_json_atomic(dir, "logs", &Value::Array(logs), true)?;
     }
     write_json_atomic(dir, "inventory", &inventory, true)?;
+    // 交易附帶的其他檔案（移除存放地點時的設定、註記、排列順序）；舊版寫下的交易日誌沒有這一段
+    if let Some(files) = journal.get("files").and_then(Value::as_object) {
+        for stem in SIDE_FILES {
+            let Some(content) = files.get(stem) else { continue };
+            let shape_ok = if stem == "config" {
+                content.is_object()
+            } else {
+                content.is_array()
+            };
+            if shape_ok {
+                write_json_atomic(dir, stem, content, true)?;
+            }
+        }
+    }
     fs::remove_file(&path).map_err(|e| AppError::io("清除交易日誌失敗", &e))?;
     Ok(true)
 }
@@ -1005,5 +1221,248 @@ mod tests {
         assert!(validate_master_write(&dir, "row_order", &json!([{"location_id":"A"}])).is_err());
         assert!(validate_master_write(&dir, "row_order", &json!({})).is_err());
         assert_eq!(read_json(&dir, "row_order").unwrap(), json!([]));
+    }
+
+    fn inbound_at(pid: &str, loc: &str, q: i64) -> TxRequest {
+        TxRequest::Inbound {
+            product_id: pid.into(),
+            location_id: loc.into(),
+            quantity: q,
+            reason: None,
+            note: None,
+        }
+    }
+    fn remove_loc(from: &str, to: &str) -> TxRequest {
+        TxRequest::RemoveLocation {
+            location_id: from.into(),
+            to_location_id: to.into(),
+            note: None,
+        }
+    }
+
+    #[test]
+    fn remove_location_moves_all_stock_and_logs_pairs() {
+        let mut inv = vec![];
+        run(inbound_at("PROD-001", "A 櫃", 10), &mut inv, &[]).unwrap();
+        run(inbound_at("PROD-002", "A 櫃", 5), &mut inv, &[]).unwrap();
+        run(inbound_at("PROD-001", "B 櫃", 3), &mut inv, &[]).unwrap();
+        run(inbound_at("PROD-002", "", 1), &mut inv, &[]).unwrap();
+
+        let logs = run(remove_loc("A 櫃", "B 櫃"), &mut inv, &[]).unwrap();
+        // 每個品項一出一入；被移除的地點結存歸零，新地點是加總後的數量
+        assert_eq!(logs.len(), 4);
+        assert!(logs.iter().all(|l| l.action_type == "TRANSFER"));
+        assert_eq!((logs[0].location_id.as_str(), logs[0].delta, logs[0].balance_after), ("A 櫃", -10, 0));
+        assert_eq!((logs[1].location_id.as_str(), logs[1].delta, logs[1].balance_after), ("B 櫃", 10, 13));
+        assert_eq!((logs[3].location_id.as_str(), logs[3].delta, logs[3].balance_after), ("B 櫃", 5, 5));
+        assert_eq!(logs[0].reason, "移除存放地點：移至 B 櫃");
+        assert_eq!(logs[1].reason, "移除存放地點：由 A 櫃 移入");
+        assert_eq!(logs[3].id, "LOG-20261013-0004");
+        assert!(inv.iter().all(|r| r.location_id != "A 櫃"));
+        assert_eq!(qty_at(&inv, "PROD-001", "B 櫃"), 13);
+        assert_eq!(qty_at(&inv, "PROD-002", "B 櫃"), 5);
+        // 其他地點不受影響，全部數量不變
+        assert_eq!(qty_at(&inv, "PROD-002", ""), 1);
+        assert_eq!(inv.iter().map(|r| r.quantity).sum::<i64>(), 19);
+
+        // 移到「未指定」（空白）
+        let logs = run(remove_loc("B 櫃", ""), &mut inv, &[]).unwrap();
+        assert_eq!(logs[0].reason, "移除存放地點：移至 未指定");
+        assert_eq!(qty_at(&inv, "PROD-002", ""), 6);
+        assert_eq!(qty_at(&inv, "PROD-001", ""), 13);
+        assert_eq!(inv.len(), 2);
+    }
+
+    #[test]
+    fn remove_location_rejects_bad_requests_and_allows_empty_location() {
+        let mut inv = vec![];
+        run(inbound_at("PROD-001", "A 櫃", 10), &mut inv, &[]).unwrap();
+        // 「未指定」不能移除、不能移到自己、目的地格式要正確
+        assert_eq!(run(remove_loc("", "A 櫃"), &mut inv.clone(), &[]).unwrap_err().code, "INVALID_INPUT");
+        assert_eq!(run(remove_loc("A 櫃", "A 櫃"), &mut inv.clone(), &[]).unwrap_err().code, "INVALID_INPUT");
+        assert!(run(remove_loc("A 櫃", " 前後空白 "), &mut inv.clone(), &[]).is_err());
+        // 加過去會超過上限：整筆中止
+        let mut big = inv.clone();
+        run(inbound_at("PROD-001", "B 櫃", MAX_QTY - 5), &mut big, &[]).unwrap();
+        assert_eq!(run(remove_loc("A 櫃", "B 櫃"), &mut big.clone(), &[]).unwrap_err().code, "INVALID_INPUT");
+        // 沒有庫存的地點：可以移除，不寫任何日誌、庫存不變
+        let before = inv.clone();
+        let logs = run(remove_loc("舊倉庫", ""), &mut inv, &[]).unwrap();
+        assert!(logs.is_empty());
+        assert_eq!(inv, before);
+        // 品項已不在清單裡的舊資料也移得走（名稱以編號代替），數量為 0 的殘留列一併清掉
+        let mut old = vec![
+            InvRow {
+                product_id: "PROD-999".into(),
+                location_id: "A 櫃".into(),
+                quantity: 4,
+                last_updated: String::new(),
+            },
+            InvRow {
+                product_id: "PROD-001".into(),
+                location_id: "A 櫃".into(),
+                quantity: 0,
+                last_updated: String::new(),
+            },
+        ];
+        let logs = run(remove_loc("A 櫃", ""), &mut old, &[]).unwrap();
+        assert_eq!(logs.len(), 2);
+        assert_eq!(logs[0].product_name, "PROD-999");
+        assert_eq!(old.len(), 1);
+        assert_eq!(qty_at(&old, "PROD-999", ""), 4);
+        // 數量是負的列（被人手動改壞的資料）：不會被默默清掉，整筆交易中止
+        let mut broken = vec![InvRow {
+            product_id: "PROD-001".into(),
+            location_id: "A 櫃".into(),
+            quantity: -3,
+            last_updated: String::new(),
+        }];
+        assert_eq!(run(remove_loc("A 櫃", ""), &mut broken, &[]).unwrap_err().code, "INSUFFICIENT_STOCK");
+    }
+
+    #[test]
+    fn remove_location_payload_defaults_to_unspecified() {
+        let tx: TxRequest = serde_json::from_value(json!({ "kind": "REMOVE_LOCATION", "location_id": "A 櫃" })).unwrap();
+        assert!(matches!(
+            tx,
+            TxRequest::RemoveLocation { ref location_id, ref to_location_id, note: None }
+                if location_id == "A 櫃" && to_location_id.is_empty()
+        ));
+    }
+
+    #[test]
+    fn remarks_and_row_order_follow_a_removed_location() {
+        let remarks = vec![
+            json!({"product_id":"PROD-001","location_id":"A 櫃","remark":"先出舊批"}),
+            json!({"product_id":"PROD-002","location_id":"A 櫃","remark":"客戶預留"}),
+            json!({"product_id":"PROD-002","location_id":"B 櫃","remark":"下層"}),
+            json!({"product_id":"PROD-003","location_id":"A 櫃","remark":"相同"}),
+            json!({"product_id":"PROD-003","location_id":"B 櫃","remark":"相同"}),
+            json!({"product_id":"PROD-004","location_id":"A 櫃","remark":"長".repeat(150)}),
+            json!({"product_id":"PROD-004","location_id":"B 櫃","remark":"久".repeat(150)}),
+            json!({"product_id":"PROD-001","location_id":"","remark":"不相干"}),
+        ];
+        let moved = move_remarks(remarks, "A 櫃", "B 櫃");
+        let get = |pid: &str, loc: &str| {
+            moved
+                .iter()
+                .find(|r| str_field(r, "product_id") == pid && str_field(r, "location_id") == loc)
+                .map(|r| str_field(r, "remark").to_string())
+        };
+        assert_eq!(get("PROD-001", "B 櫃").as_deref(), Some("先出舊批"), "新地點沒有註記：直接搬過去");
+        assert_eq!(get("PROD-002", "B 櫃").as_deref(), Some("下層；客戶預留"), "兩邊都有：接在後面");
+        assert_eq!(get("PROD-003", "B 櫃").as_deref(), Some("相同"), "內容相同不重複");
+        // 接起來太長：新地點保留原本的，舊的那一則留在原處不刪
+        assert_eq!(get("PROD-004", "B 櫃").as_deref(), Some("久".repeat(150).as_str()));
+        assert_eq!(get("PROD-004", "A 櫃").as_deref(), Some("長".repeat(150).as_str()));
+        let still_at_a: Vec<&str> = moved
+            .iter()
+            .filter(|r| str_field(r, "location_id") == "A 櫃")
+            .map(|r| str_field(r, "product_id"))
+            .collect();
+        assert_eq!(still_at_a, vec!["PROD-004"], "其他註記都搬走了");
+        assert_eq!(get("PROD-001", "").as_deref(), Some("不相干"));
+        // 搬完仍符合註記檔的格式檢查（同一品項＋地點不重複、長度不超過上限）
+        let root = crate::engine::storage::tests_support::temp_root("mvremark");
+        create_project(&root, "p").unwrap();
+        let dir = project_dir(&root, "p").unwrap();
+        assert!(validate_master_write(&dir, "remarks", &Value::Array(moved)).is_ok());
+
+        let order = vec![
+            json!({"product_id":"PROD-001","location_id":"A 櫃"}),
+            json!({"product_id":"PROD-002","location_id":"B 櫃"}),
+            json!({"product_id":"PROD-002","location_id":"A 櫃"}),
+            json!({"product_id":"PROD-003","location_id":""}),
+        ];
+        let moved = move_row_order(order, "A 櫃", "B 櫃");
+        assert_eq!(
+            moved,
+            vec![
+                json!({"product_id":"PROD-001","location_id":"B 櫃"}),
+                json!({"product_id":"PROD-002","location_id":"B 櫃"}),
+                json!({"product_id":"PROD-003","location_id":""}),
+            ],
+            "位置不變；新地點本來就有的品項不重複"
+        );
+        assert!(validate_master_write(&dir, "row_order", &Value::Array(moved)).is_ok());
+    }
+
+    #[test]
+    fn remove_location_updates_side_files_and_survives_crash_replay() {
+        let root = crate::engine::storage::tests_support::temp_root("rmloc");
+        create_project(&root, "p").unwrap();
+        let dir = project_dir(&root, "p").unwrap();
+        let (p, _) = master();
+        write_json_atomic(&dir, "products", &Value::Array(p), true).unwrap();
+        run_transaction(&dir, &inbound_at("PROD-001", "A 櫃", 10)).unwrap();
+        run_transaction(&dir, &inbound_at("PROD-002", "A 櫃", 4)).unwrap();
+        run_transaction(&dir, &inbound_at("PROD-001", "B 櫃", 3)).unwrap();
+        write_json_atomic(
+            &dir,
+            "remarks",
+            &json!([{"product_id":"PROD-001","location_id":"A 櫃","remark":"先出舊批"}]),
+            true,
+        )
+        .unwrap();
+        write_json_atomic(
+            &dir,
+            "row_order",
+            &json!([{"product_id":"PROD-002","location_id":"A 櫃"},{"product_id":"PROD-001","location_id":"A 櫃"}]),
+            true,
+        )
+        .unwrap();
+        let name_before = read_json(&dir, "config").unwrap()["name"].clone();
+
+        let out = run_transaction(&dir, &remove_loc("A 櫃", "B 櫃")).unwrap();
+        assert_eq!(out.new_logs.len(), 4);
+        assert!(out.products.is_none());
+        // 設定：記下移除時間，原有內容保留
+        let config = read_json(&dir, "config").unwrap();
+        assert_eq!(config["name"], name_before);
+        let removed_at = config["removed_locations"]["A 櫃"].as_str().unwrap().to_string();
+        assert_eq!(removed_at, out.new_logs[0].timestamp, "移除時間和這次異動的時間相同");
+        assert_eq!(out.config.as_ref().unwrap(), &config);
+        // 註記與排列順序跟著搬
+        let remarks = read_json(&dir, "remarks").unwrap();
+        assert_eq!(remarks, json!([{"product_id":"PROD-001","location_id":"B 櫃","remark":"先出舊批"}]));
+        assert_eq!(out.remarks.as_ref().unwrap(), &remarks);
+        let order = read_json(&dir, "row_order").unwrap();
+        assert_eq!(
+            order,
+            json!([{"product_id":"PROD-002","location_id":"B 櫃"},{"product_id":"PROD-001","location_id":"B 櫃"}])
+        );
+        assert_eq!(out.row_order.as_ref().unwrap(), &order);
+        // 庫存與歷史紀錄
+        let inv = read_inventory(&dir).unwrap();
+        assert!(inv.iter().all(|r| r.location_id == "B 櫃"));
+        assert_eq!(qty_at(&inv, "PROD-001", "B 櫃"), 13);
+        assert_eq!(read_array(&dir, "logs").unwrap().len(), 7);
+        assert!(!file_path(&dir, PENDING_FILE).exists());
+        // 一般交易不會動到這三個檔，也不回傳
+        let plain = run_transaction(&dir, &inbound_at("PROD-001", "B 櫃", 1)).unwrap();
+        assert!(plain.config.is_none() && plain.remarks.is_none() && plain.row_order.is_none());
+
+        // 模擬：交易日誌寫好後斷電（庫存、設定、註記都還沒寫）→ 下次開啟時補完，重做不會重複
+        let mut inv = read_inventory(&dir).unwrap();
+        inv.retain(|r| r.product_id != "PROD-002");
+        let mut cfg = read_json(&dir, "config").unwrap();
+        cfg["removed_locations"]["C 櫃"] = json!("2099-01-01T00:00:00Z");
+        write_json_atomic(
+            &dir,
+            PENDING_FILE,
+            &json!({
+                "inventory": inv,
+                "new_logs": [],
+                "files": { "config": cfg, "remarks": [], "row_order": "格式不對的內容會被略過", "inventory": [] }
+            }),
+            false,
+        )
+        .unwrap();
+        assert!(commit_pending(&dir).unwrap());
+        assert_eq!(read_json(&dir, "config").unwrap()["removed_locations"]["C 櫃"], "2099-01-01T00:00:00Z");
+        assert_eq!(read_json(&dir, "remarks").unwrap(), json!([]));
+        assert_eq!(read_json(&dir, "row_order").unwrap(), order, "格式不對的附帶檔不寫入");
+        assert!(read_inventory(&dir).unwrap().iter().all(|r| r.product_id == "PROD-001"), "files 裡不可覆寫庫存");
+        assert!(!commit_pending(&dir).unwrap());
     }
 }

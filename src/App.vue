@@ -43,14 +43,15 @@ watch(
 
 onMounted(async () => {
   await project.init()
-  // 開啟程式時檢查一次更新（等畫面出來再查，不影響開啟速度；查不到就算了）
+  // 開啟程式時檢查更新（等畫面出來再查，不影響開啟速度；查不到就算了），之後每隔幾小時再查一次。
+  // 「自動更新」開著時，這一次檢查發現新版本會直接安裝並重新開啟。
   await update.loadInfo()
-  if (!project.fatal) setTimeout(() => update.check(false), 1500)
+  if (!project.fatal) update.start()
 })
 </script>
 
 <template>
-  <div v-if="!project.ready" class="flex h-full items-center justify-center text-mute">載入中…</div>
+  <div v-if="!project.ready" class="on-canvas flex h-full items-center justify-center text-mute">載入中…</div>
 
   <div v-else-if="project.fatal" class="flex h-full items-center justify-center p-10">
     <div class="panel max-w-xl p-8">
@@ -63,7 +64,7 @@ onMounted(async () => {
     <AppSidebar />
     <div class="flex min-w-0 flex-1 flex-col">
       <TopBar @show-issues="showIssues = true" />
-      <main class="min-h-0 flex-1 overflow-auto px-7 py-6">
+      <main class="on-canvas min-h-0 flex-1 overflow-auto px-7 py-6">
         <component :is="view" :key="`${project.current}:${ui.page}`" />
       </main>
     </div>

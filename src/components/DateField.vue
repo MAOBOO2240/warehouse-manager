@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
         :id="id || undefined"
         ref="yEl"
         :value="y"
-        class="num w-[3.2em] bg-transparent py-1.5 text-center text-[15px] outline-none placeholder:text-mute/60"
+        class="num w-[3.2em] bg-transparent py-1.5 text-center text-[15px] outline-none placeholder:text-mute/75"
         inputmode="numeric"
         placeholder="年"
         aria-label="年"
@@ -154,7 +154,7 @@ onBeforeUnmount(() => {
       <input
         ref="mEl"
         :value="m"
-        class="num w-[2.2em] bg-transparent py-1.5 text-center text-[15px] outline-none placeholder:text-mute/60"
+        class="num w-[2.2em] bg-transparent py-1.5 text-center text-[15px] outline-none placeholder:text-mute/75"
         inputmode="numeric"
         placeholder="月"
         aria-label="月"
@@ -166,7 +166,7 @@ onBeforeUnmount(() => {
       <input
         ref="dEl"
         :value="d"
-        class="num w-[2.2em] bg-transparent py-1.5 text-center text-[15px] outline-none placeholder:text-mute/60"
+        class="num w-[2.2em] bg-transparent py-1.5 text-center text-[15px] outline-none placeholder:text-mute/75"
         inputmode="numeric"
         placeholder="日"
         aria-label="日"

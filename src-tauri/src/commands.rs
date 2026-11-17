@@ -33,8 +33,8 @@ impl AppState {
     fn root(&self) -> AppResult<PathBuf> {
         self.root.clone()
     }
-    /// 寫入佇列：同一時間只會有一個檔案操作在進行
-    fn queue(&self) -> MutexGuard<'_, ()> {
+    /// 寫入佇列：同一時間只會有一個檔案操作在進行（更新程式要關閉前也會先排進來，等寫入做完）
+    pub(crate) fn queue(&self) -> MutexGuard<'_, ()> {
         self.lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
     fn project_dir(&self, project: &str) -> AppResult<PathBuf> {
@@ -130,6 +130,9 @@ pub async fn write_data_atomic(
     }
     let _q = state.queue();
     let dir = state.project_dir(&project)?;
+    // 先補完上次沒做完的交易：交易日誌裡也可能有設定、註記、排列順序（移除存放地點時），
+    // 不先補完的話，之後補完時會用日誌裡的舊內容蓋掉這次寫入的新內容
+    tx::commit_pending(&dir)?;
     tx::validate_master_write(&dir, &file_type, &content)?;
     storage::write_json_atomic(&dir, &file_type, &content, true)
 }

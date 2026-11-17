@@ -6,6 +6,8 @@
   - 按鈕、標籤、切換鈕一律膠囊形（全圓角），頂部一道微光、底部一層柔影，做出微凸的按壓手感。
   - 所有圓角使用 G2 連續曲率（corner-shape: squircle），需 WebView2 139 以上；較舊版本自動顯示為一般圓角。
   - 深色與淺色兩組色彩，在「設定」中切換；文字大小以整體縮放（zoom）調整。
+  - 深色＝石墨灰：視窗底色是 #8A8B8A，卡片、側邊欄、選單是同一個色系裡更深的炭灰。
+    視窗底色是中灰，直接放在上面的字（頁面標題、說明）用深色字；卡片裡的字用淺色字——見下方「文字顏色跟著底色走」。
 */
 @theme static {
   /* 淺色（預設值；深色在下方覆寫） */
@@ -17,28 +19,39 @@
   --color-line: #e2e4ea;
   --color-ink: #17181c;
   --color-ink-2: #3a3c44;
-  --color-mute: #6c6f7a;
+  --color-mute: #646773;
   --color-accent: #0a6cf0;
   --color-accent-soft: #e3eeff;
   --color-on-accent: #ffffff;
-  --color-go: #1b8a4c;
+  --color-go: #177a43;
   --color-go-soft: #e2f5e9;
+  --color-on-go: #ffffff;
   --color-signal: #d93a2f;
   --color-signal-soft: #fde9e7;
+  --color-on-signal: #ffffff;
   --color-safety: #f0a800;
   --color-safety-soft: #fff4d6;
+  --color-on-safety: #2a1d00;
   --color-violet: #7a4fe0;
   --color-violet-soft: #efe8ff;
+  --color-on-violet: #ffffff;
   --color-amber: #d98600;
-  --color-on-amber: #ffffff;
+  --color-on-amber: #2a1d00;
   /* 主頁面：沉穩的藍灰色（藍色留給出庫） */
   --color-slate: #4f6178;
+  --color-on-slate: #ffffff;
   /* 下拉選單與彈出清單的底色 */
   --color-menu: #ffffff;
   /* 輸入框：明確外框＋與卡片不同的底色 */
   --color-field: #f9fafc;
   --color-field-line: #c6ccd8;
   --color-field-line-hover: #98a1b3;
+  /* 圖表：入庫／出貨／損壞三種長條，與單色排行長條（深淺色各自選過，色弱也分得出來） */
+  --color-chart-in: #1b8a4c;
+  --color-chart-out: #0a6cf0;
+  --color-chart-damage: #d93a2f;
+  --color-chart-bar: #5b6cf0;
+  --color-chart-track: #e9ebf1;
 
   --radius-sm: 8px;
   --radius: 10px;
@@ -52,35 +65,49 @@
   --font-num: "Bahnschrift", "DIN Alternate", "Roboto Condensed", "Microsoft JhengHei UI", sans-serif;
 }
 
+/*
+  深色（石墨灰）：以 #8A8B8A 為視窗底色，其餘是同色系的炭灰與淺灰。
+  對比（WCAG）：卡片上的主要文字 12.6:1、次要文字 9.5:1、說明文字 5.9:1；
+  視窗底色上的深色字 5.7:1／4.8:1；實心按鈕一律「亮色底＋深色字」（6.5:1 以上）。
+*/
 :root[data-theme="dark"] {
-  --color-canvas: #0f1013;
-  --color-nav: #16171b;
-  --color-panel: #1d1e23;
-  --color-raised: #2a2c32;
-  --color-hover: #32343b;
-  --color-line: #2e3036;
-  --color-ink: #f2f3f6;
-  --color-ink-2: #d0d2d9;
-  --color-mute: #9496a0;
-  --color-accent: #3d8eff;
-  --color-accent-soft: #1b2b45;
-  --color-on-accent: #ffffff;
-  --color-go: #34c26a;
-  --color-go-soft: #173323;
-  --color-signal: #ff5a4f;
-  --color-signal-soft: #3d1c1a;
+  --color-canvas: #8a8b8a;
+  --color-nav: #242524;
+  --color-panel: #2b2c2b;
+  --color-raised: #3a3b3a;
+  --color-hover: #464746;
+  --color-line: #434443;
+  --color-ink: #f2f3f2;
+  --color-ink-2: #d4d5d4;
+  --color-mute: #a8a9a8;
+  --color-accent: #5aa2ff;
+  --color-accent-soft: #1e2e47;
+  --color-on-accent: #061a36;
+  --color-go: #3ecb78;
+  --color-go-soft: #173824;
+  --color-on-go: #04230f;
+  --color-signal: #ff6b61;
+  --color-signal-soft: #45211e;
+  --color-on-signal: #2e0907;
   --color-safety: #ffcc33;
-  --color-safety-soft: #3a3016;
-  --color-violet: #a585ff;
-  --color-violet-soft: #2a2145;
+  --color-safety-soft: #3d3317;
+  --color-on-safety: #2a1d00;
+  --color-violet: #b197ff;
+  --color-violet-soft: #2e2550;
+  --color-on-violet: #1a0e3c;
   --color-amber: #f5b329;
   --color-on-amber: #2a1d00;
-  --color-slate: #93a6bf;
+  --color-slate: #a9b9cf;
   --color-on-slate: #10161f;
-  --color-menu: #22242a;
-  --color-field: #121318;
-  --color-field-line: #4d5260;
-  --color-field-line-hover: #737a8c;
+  --color-menu: #303130;
+  --color-field: #1d1e1d;
+  --color-field-line: #707170;
+  --color-field-line-hover: #8a8b8a;
+  --color-chart-in: #25a35a;
+  --color-chart-out: #3987e5;
+  --color-chart-damage: #e66767;
+  --color-chart-bar: #7b8cf5;
+  --color-chart-track: #3a3b3a;
   color-scheme: dark;
 }
 
@@ -92,13 +119,48 @@
   --field-inset: inset 0 1px 2px rgb(16 18 24 / 0.06);
   --ui-scale: 1;
   --tone: var(--color-accent);
+  --tone-fg: var(--color-on-accent);
+  /* 鍵盤焦點外框的顏色 */
+  --focus: var(--color-accent);
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --gloss: inset 0 1px 0 rgb(255 255 255 / 0.12);
-  --bubble-shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 20px -8px rgb(0 0 0 / 0.7);
-  --card-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 16px 40px -20px rgb(0 0 0 / 0.9);
-  --field-inset: inset 0 2px 4px rgb(0 0 0 / 0.35);
+  --gloss: inset 0 1px 0 rgb(255 255 255 / 0.1);
+  --bubble-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 18px -10px rgb(0 0 0 / 0.6);
+  --card-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 2px 4px rgb(0 0 0 / 0.16), 0 18px 36px -20px rgb(0 0 0 / 0.6);
+  --field-inset: inset 0 2px 4px rgb(0 0 0 / 0.3);
+  /* 白色的焦點外框在中灰的視窗底色與炭灰的卡片上都看得清楚（藍色在中灰上只有 1.3:1） */
+  --focus: #ffffff;
+}
+
+/*
+  文字顏色跟著底色走（只有深色主題需要）：
+  - .on-canvas：直接鋪在視窗底色 #8A8B8A 上的區域（各頁面的標題與說明）→ 深色字。
+  - 深色底的區塊（卡片、彈窗、選單）把文字換回淺色；輸入框、膠囊按鈕這類「自己有深色底」的元件也是。
+  淺色主題兩邊的值相同，所以不用另外寫。
+  放在 base 層：這裡設定的 color 只是預設值，元件與 text-* 工具類別（例如 text-signal）仍然優先。
+*/
+@layer base {
+  :root[data-theme="dark"] .on-canvas {
+    --color-ink: #0d0e0d;
+    --color-ink-2: #161716;
+    --color-mute: #1f201f;
+    --color-line: #6f706f;
+    color: var(--color-ink);
+  }
+  :root[data-theme="dark"] :is(.panel, .modal-panel, .menu-panel, .surface) {
+    --color-ink: #f2f3f2;
+    --color-ink-2: #d4d5d4;
+    --color-mute: #a8a9a8;
+    --color-line: #434443;
+    color: var(--color-ink);
+  }
+  :root[data-theme="dark"] :is(.field, .date-box, .pill, .btn-ghost, .menu-trigger, .loc-badge, .seg, .chip) {
+    --color-ink: #f2f3f2;
+    --color-ink-2: #d4d5d4;
+    --color-mute: #a8a9a8;
+    --color-line: #434443;
+  }
 }
 
 @layer base {
@@ -130,7 +192,7 @@
     user-select: text;
   }
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
   input[type="number"]::-webkit-inner-spin-button {
@@ -196,11 +258,11 @@
     background-image: linear-gradient(180deg, color-mix(in oklab, var(--color-accent) 82%, white), var(--color-accent));
   }
   .btn-go {
-    @apply btn text-white hover:brightness-110;
+    @apply btn text-on-go hover:brightness-110;
     background-image: linear-gradient(180deg, color-mix(in oklab, var(--color-go) 82%, white), var(--color-go));
   }
   .btn-danger {
-    @apply btn text-white hover:brightness-110;
+    @apply btn text-on-signal hover:brightness-110;
     background-image: linear-gradient(180deg, color-mix(in oklab, var(--color-signal) 82%, white), var(--color-signal));
   }
   .btn-ghost {
@@ -219,7 +281,16 @@
     @apply border-transparent bg-accent text-on-accent hover:border-transparent hover:bg-accent;
   }
   .pill-danger-on {
-    @apply border-transparent bg-signal text-white hover:border-transparent hover:bg-signal;
+    @apply border-transparent bg-signal text-on-signal hover:border-transparent hover:bg-signal;
+  }
+  /* 依所在區塊的主題色（--tone）選取的膠囊：入庫是綠色、改變地點是紫色… */
+  .pill-tone-on {
+    @apply border-transparent hover:border-transparent;
+    color: var(--tone-fg);
+    background: var(--tone);
+  }
+  .pill-tone-on:hover {
+    background: var(--tone);
   }
   /* 懸浮卡片 */
   .panel {
@@ -265,7 +336,8 @@
     border-bottom: 1px solid color-mix(in oklab, var(--tone) 22%, var(--color-line));
   }
   .modal-icon {
-    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white;
+    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-full;
+    color: var(--tone-fg);
     background-image: linear-gradient(180deg, color-mix(in oklab, var(--tone) 80%, white), var(--tone));
     box-shadow: var(--gloss), 0 6px 14px -6px color-mix(in oklab, var(--tone) 70%, black);
     corner-shape: round;
@@ -281,7 +353,7 @@
     border: 1.5px solid color-mix(in oklab, var(--tone) 32%, transparent);
   }
   .btn-violet {
-    @apply btn text-white hover:brightness-110;
+    @apply btn text-on-violet hover:brightness-110;
     background-image: linear-gradient(180deg, color-mix(in oklab, var(--color-violet) 82%, white), var(--color-violet));
   }
   .btn-violet.btn-sm {
@@ -397,11 +469,21 @@ body.is-sorting * {
     @apply shrink-0 text-[12px] text-mute;
   }
 
+  /* 淡色底上「主題色的字」（--act-ink）：要在用到的元件自己身上算——寫在 :root 的話，
+     算出來的是 :root 的 --tone（藍色），底下每個元件都只會繼承到那個藍色。深色主題把字調亮一點才夠清楚。 */
+  .act,
+  .icon-badge {
+    --act-ink: var(--tone);
+  }
+  :root[data-theme="dark"] :is(.act, .icon-badge) {
+    --act-ink: color-mix(in oklab, var(--tone) 78%, white);
+  }
+
   /* ---- 庫存清單每一列的操作：小膠囊，文字與淡底用該動作的顏色（--tone） ---- */
   .act {
     @apply inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[13px] font-semibold whitespace-nowrap transition-colors select-none active:translate-y-px;
     corner-shape: round;
-    color: var(--tone);
+    color: var(--act-ink);
     background: color-mix(in oklab, var(--tone) 13%, transparent);
   }
   .act:hover {
@@ -416,6 +498,97 @@ body.is-sorting * {
   }
   .nav-sub-item.is-active .nav-sub-count {
     color: inherit;
+  }
+}
+
+@layer components {
+  /* ---- 分段切換（庫存清單的顯示方式、入庫方式）：選到的那一格填滿所在區塊的主題色（--tone） ---- */
+  .seg {
+    @apply inline-flex items-center gap-1 rounded-full bg-raised p-1;
+    box-shadow: var(--field-inset);
+    corner-shape: round;
+  }
+  .seg-item {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-1.5 text-[14px] font-semibold whitespace-nowrap text-ink-2 transition-colors select-none hover:text-ink disabled:cursor-not-allowed disabled:opacity-45;
+    corner-shape: round;
+  }
+  .seg-item.is-on {
+    color: var(--tone-fg);
+    background: var(--tone);
+    box-shadow: var(--gloss), var(--bubble-shadow);
+  }
+
+  /* ---- 小標籤：存放地點＋數量（品項在各地點的分布） ---- */
+  .chip {
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-full bg-raised px-2.5 py-1 text-[13px] font-semibold whitespace-nowrap text-ink-2;
+    corner-shape: round;
+  }
+  .chip-num {
+    @apply text-ink;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- 開關（設定裡的自動更新） ---- */
+  .switch {
+    @apply relative inline-block h-6 w-11 shrink-0 rounded-full bg-raised transition-colors;
+    border: 1.5px solid var(--color-field-line);
+    corner-shape: round;
+  }
+  .switch::after {
+    content: "";
+    @apply absolute top-1/2 left-[2px] h-[17px] w-[17px] -translate-y-1/2 rounded-full bg-mute transition-all;
+    corner-shape: round;
+  }
+  .switch.is-on {
+    background: var(--color-accent);
+    border-color: transparent;
+  }
+  .switch.is-on::after {
+    left: calc(100% - 19px);
+    background: var(--color-on-accent);
+  }
+
+  /* ---- 進行中的轉圈圖示 ---- */
+  .spinner {
+    @apply inline-block h-6 w-6 shrink-0 rounded-full;
+    border: 3px solid color-mix(in oklab, var(--tone) 25%, transparent);
+    border-top-color: var(--tone);
+    corner-shape: round;
+    animation: wm-spin 0.8s linear infinite;
+  }
+
+  /* ---- 圖示圓章（統計卡、區塊標題前的圖示）：顏色跟著 --tone ---- */
+  .icon-badge {
+    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-full;
+    color: var(--act-ink);
+    background: color-mix(in oklab, var(--tone) 16%, transparent);
+    corner-shape: round;
+  }
+
+  /* ---- 區塊小標題（卡片裡的標題列） ---- */
+  .card-title {
+    @apply text-[15.5px] font-bold text-ink;
+  }
+
+  /* ---- 頁面標題前的圖示：一顆懸浮的圓章，圖示用該頁的主題色 ---- */
+  .page-icon {
+    @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-panel;
+    color: var(--tone);
+    box-shadow: var(--card-shadow);
+    corner-shape: round;
+  }
+
+  /* ---- 頂部列：一整條懸浮的膠囊（專案切換與資料位置都放在裡面，不直接壓在視窗底色上） ---- */
+  .topbar {
+    @apply flex items-center gap-2.5 rounded-full py-2 pr-5 pl-4;
+    corner-shape: round;
+  }
+}
+
+@keyframes wm-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 

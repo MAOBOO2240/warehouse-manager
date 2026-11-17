@@ -131,7 +131,13 @@ async function submit() {
 
   <div class="grid max-w-5xl grid-cols-5 gap-6">
     <form class="panel col-span-3 space-y-6 p-7" :style="{ '--tone': action === 'DAMAGE' ? 'var(--color-signal)' : 'var(--color-accent)' }" @submit.prevent="submit">
-      <ProductPicker ref="picker" :selected="selected" @select="onSelect" @clear="onClear" />
+      <div>
+        <ProductPicker ref="picker" :selected="selected" @select="onSelect" @clear="onClear" />
+        <!-- 有用存放地點的專案：選好品項，先說總共有多少、分放在幾個地點 -->
+        <p v-if="productId && stock.usesLocations && rows.length" class="mt-2 pl-1 text-[12.5px] text-mute">
+          全部共 <span class="num">{{ fmtInt(stock.total(productId)) }}</span> 件，放在 <span class="num">{{ fmtInt(rows.length) }}</span> 個地點
+        </p>
+      </div>
 
       <!-- 沒有用存放地點的專案：不用選地點（都是「未指定」那一個），只在沒有庫存時提醒 -->
       <div v-if="!stock.usesLocations && productId && !rows.length" class="rounded-2xl bg-signal-soft px-4 py-3.5 text-[13px] text-signal">

@@ -11,7 +11,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['close'])
 
-const toneStyle = computed(() => ({ '--tone': `var(--color-${props.tone})` }))
+const toneStyle = computed(() => ({ '--tone': `var(--color-${props.tone})`, '--tone-fg': `var(--color-on-${props.tone}, #fff)` }))
 
 function onKey(e) {
   if (e.key === 'Escape' && props.closable) emit('close')

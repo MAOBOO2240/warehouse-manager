@@ -101,28 +101,30 @@ function onAction(id) {
 </script>
 
 <template>
-  <header class="flex shrink-0 items-center gap-2.5 px-7 pt-5 pb-1">
-    <label class="pl-1 text-[13px] font-semibold whitespace-nowrap text-mute" for="project-select">目前專案</label>
-    <ProjectSwitcher
-      :projects="project.projects"
-      :current="project.current"
-      :disabled="project.loading"
-      :busy="busy"
-      @select="switchTo"
-      @action="onAction"
-    />
+  <header class="shrink-0 px-7 pt-5 pb-1">
+    <div class="panel topbar">
+      <label class="pl-1 text-[13px] font-semibold whitespace-nowrap text-mute" for="project-select">目前專案</label>
+      <ProjectSwitcher
+        :projects="project.projects"
+        :current="project.current"
+        :disabled="project.loading"
+        :busy="busy"
+        @select="switchTo"
+        @action="onAction"
+      />
 
-    <button
-      v-if="project.readOnly"
-      type="button"
-      class="btn btn-sm ml-1 bg-signal-soft text-signal"
-      @click="emit('show-issues')"
-    >
-      資料檔異常・唯讀模式
-    </button>
+      <button
+        v-if="project.readOnly"
+        type="button"
+        class="btn btn-sm ml-1 bg-signal-soft text-signal"
+        @click="emit('show-issues')"
+      >
+        資料檔異常・唯讀模式
+      </button>
 
-    <div class="ml-auto truncate pl-4 text-[12px] text-mute" :title="project.rootPath">
-      資料位置：<span class="selectable">{{ project.rootPath }}</span>
+      <div class="ml-auto min-w-0 truncate pl-4 text-[12.5px] text-mute" :title="project.rootPath">
+        資料位置：<span class="selectable text-ink-2">{{ project.rootPath }}</span>
+      </div>
     </div>
   </header>
 

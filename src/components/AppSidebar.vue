@@ -21,16 +21,31 @@ function onUpdateClick() {
   } else update.check(true)
 }
 
-/* ---- 庫存清單底下列出目前的存放地點（有庫存的），點選後只顯示該地點 ---- */
-const locCompare = (a, b) => (a === '') - (b === '') || a.localeCompare(b, 'zh-Hant', { numeric: true })
-const locations = computed(() => {
-  const m = new Map()
-  for (const r of stock.inventory) if (r.quantity > 0) m.set(r.location_id, (m.get(r.location_id) || 0) + 1)
-  return [...m.keys()].sort(locCompare).map((loc) => ({ loc, count: m.get(loc) }))
+// 自己在電腦上編譯的版本沒有對應的發行版本，不會自動更新（開關照樣可以切換，換成正式版就會生效）
+const selfBuilt = computed(() => !!update.info && !update.info.can_update)
+
+// 上次檢查更新的時間與結果：查不到新版本時直接寫出原因（例如私人倉庫沒有設定更新權杖），不會無聲無息
+const lastCheck = computed(() => {
+  const s = update.status
+  if (!s) return null
+  const d = s.at
+  const pad = (n) => String(n).padStart(2, '0')
+  const now = new Date()
+  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  const time = `${sameDay ? '' : `${d.getMonth() + 1}/${d.getDate()} `}${pad(d.getHours())}:${pad(d.getMinutes())}`
+  if (!s.ok) return { failed: true, text: `${time} 檢查失敗：${s.message}` }
+  if (s.hasUpdate) return { failed: false, text: `${time} 檢查：有新版本可以更新` }
+  return { failed: false, text: s.canUpdate ? `${time} 檢查：已經是最新版本` : `${time} 檢查：自己編譯的版本無法比對新舊` }
 })
-const allCount = computed(() => locations.value.reduce((t, l) => t + l.count, 0))
+
+/* ---- 庫存清單底下列出目前的存放地點（有庫存的），點選後只顯示該地點 ---- */
+// stock.locationStats：[{ loc, items（品項數）, qty（件數） }]，已依名稱排好、「未指定」在最後
+const locations = computed(() => stock.locationStats)
+const allCount = computed(() => locations.value.reduce((t, l) => t + l.items, 0))
 // 只有「未指定」一個地點時（沒有用到存放地點）不列出子選單
 const showLocs = computed(() => locations.value.some((l) => l.loc))
+// 滑鼠停在地點上：完整名稱（太長時畫面上會截短）與「幾項・幾件」
+const locTitle = (l) => `${locLabel(l.loc)}：${fmtInt(l.items)} 項・${fmtInt(l.qty)} 件`
 
 function openInventory(loc = null) {
   ui.invLoc = loc
@@ -194,7 +209,7 @@ onBeforeUnmount(() => {
                 @click="openInventory(null)"
               >
                 <svg viewBox="0 0 24 24" class="h-[14px] w-[14px] shrink-0 opacity-80" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3.5 7.5 12 12l8.5-4.5zM3.5 12 12 16.5l8.5-4.5M3.5 16.5 12 21l8.5-4.5" /></svg>
-              <span class="min-w-0 flex-1 truncate">全部地點</span>
+                <span class="min-w-0 flex-1 truncate">全部地點</span>
                 <span class="num nav-sub-count">{{ fmtInt(allCount) }}</span>
               </button>
               <button
@@ -204,7 +219,7 @@ onBeforeUnmount(() => {
                 class="nav-sub-item"
                 :class="subActive(l.loc) ? 'is-active' : ''"
                 :aria-current="subActive(l.loc) ? 'page' : undefined"
-                :title="locLabel(l.loc)"
+                :title="locTitle(l)"
                 @click="openInventory(l.loc)"
               >
                 <svg
@@ -221,7 +236,7 @@ onBeforeUnmount(() => {
                   <circle cx="12" cy="10" r="2.3" />
                 </svg>
                 <span class="min-w-0 flex-1 truncate" :class="l.loc ? '' : 'italic'">{{ locLabel(l.loc) }}</span>
-                <span class="num nav-sub-count">{{ fmtInt(l.count) }}</span>
+                <span class="num nav-sub-count">{{ fmtInt(l.items) }}</span>
               </button>
             </div>
           </template>
@@ -231,7 +246,7 @@ onBeforeUnmount(() => {
 
     <!-- 左下角設定 -->
     <div ref="settingsEl" class="relative pt-3">
-      <div v-if="showSettings" class="menu-panel absolute bottom-full left-0 z-40 mb-2 w-64 p-4" role="dialog" aria-label="設定">
+      <div v-if="showSettings" class="menu-panel absolute bottom-full left-0 z-40 mb-2 w-72 p-4" role="dialog" aria-label="設定">
         <div class="mb-2 text-[13px] font-semibold text-mute">文字大小</div>
         <div class="grid grid-cols-3 gap-2">
           <button
@@ -289,6 +304,27 @@ onBeforeUnmount(() => {
             {{ update.checking ? '檢查中…' : update.result?.has_update ? '更新到新版本' : '檢查更新' }}
           </button>
         </div>
+        <!-- 上次檢查的結果；失敗時寫出原因（可以選取複製） -->
+        <p
+          v-if="lastCheck"
+          class="selectable mt-1.5 pl-1 text-[12px] leading-snug wrap-anywhere"
+          :class="lastCheck.failed ? 'text-signal' : 'text-mute'"
+          :role="lastCheck.failed ? 'alert' : undefined"
+        >{{ lastCheck.text }}</p>
+        <!-- 自動更新：整列都可以點，右邊的開關顯示目前狀態 -->
+        <button
+          type="button"
+          role="switch"
+          class="-mx-2 mt-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors hover:bg-hover"
+          :aria-checked="ui.settings.autoUpdate"
+          @click="ui.settings.autoUpdate = !ui.settings.autoUpdate"
+        >
+          <span class="min-w-0 flex-1">
+            <span class="block text-[13.5px] font-semibold text-ink">自動更新</span>
+            <span class="mt-0.5 block text-[12px] leading-snug text-mute">{{ selfBuilt ? '這個版本是自己編譯的，不會自動更新' : '開啟程式時有新版本就直接安裝' }}</span>
+          </span>
+          <span class="switch" :class="{ 'is-on': ui.settings.autoUpdate }" aria-hidden="true" />
+        </button>
       </div>
       <button
         type="button"

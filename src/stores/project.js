@@ -26,6 +26,8 @@ export const useProjectStore = defineStore('project', () => {
   const loading = ref(false)
   const issues = ref([]) // 開啟專案時偵測到的異常資料檔
   const recovered = ref(false)
+  // 專案設定（config.json）；removed_locations 記錄被移除的存放地點與移除時間
+  const config = ref({})
 
   /** 有資料檔異常時進入唯讀，避免以空資料覆蓋掉損壞但可能可救回的檔案 */
   const readOnly = computed(() => issues.value.length > 0)
@@ -67,6 +69,7 @@ export const useProjectStore = defineStore('project', () => {
       current.value = res.name
       issues.value = res.issues
       recovered.value = res.recovered
+      config.value = res.data.config ?? {}
       useProductStore().items = res.data.products ?? []
       const stock = useStockStore()
       stock.inventory = res.data.inventory ?? []
@@ -125,7 +128,7 @@ export const useProjectStore = defineStore('project', () => {
   }
 
   return {
-    ready, fatal, rootPath, version, projects, current, loading, issues, recovered, readOnly,
+    ready, fatal, rootPath, version, projects, current, loading, issues, recovered, config, readOnly,
     assertWritable, init, refreshList, open, create, remove, restoreFromBackups, exportZip, importZip,
   }
 })

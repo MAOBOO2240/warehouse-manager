@@ -1,5 +1,6 @@
 // 前端呼叫 Rust 端 Tauri Command 的封裝。所有錯誤統一轉成 ApiError（code + message）。
 import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 export class ApiError extends Error {
   constructor(code, message) {
@@ -45,4 +46,13 @@ export const api = {
   updateInfo: () => call('update_info'),
   updateCheck: () => call('update_check'),
   updateInstall: () => call('update_install'),
+  /** 視窗標題列跟著程式的深色／淺色外觀；系統不支援或失敗時不影響使用 */
+  setWindowTheme: async (theme) => {
+    if (!isTauri) return
+    try {
+      await getCurrentWindow().setTheme(theme === 'light' ? 'light' : 'dark')
+    } catch {
+      /* 忽略 */
+    }
+  },
 }

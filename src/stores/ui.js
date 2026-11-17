@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { api } from '../api'
 
 const SETTINGS_KEY = 'warehouse-ui-settings'
 export const FONT_SCALES = { small: 0.9, medium: 1, large: 1.15 }
@@ -22,16 +23,26 @@ function loadSettings() {
     return {
       theme: raw.theme === 'light' ? 'light' : 'dark',
       fontSize: raw.fontSize in FONT_SCALES ? raw.fontSize : 'medium',
+      // 開啟程式時發現新版本就自動更新；關掉的話改成先詢問
+      autoUpdate: raw.autoUpdate !== false,
+      // 庫存清單的顯示方式：loc＝依存放地點分開；item＝每個品項一列（不分地點的總數）
+      invView: raw.invView === 'item' ? 'item' : 'loc',
     }
   } catch {
-    return { theme: 'dark', fontSize: 'medium' }
+    return { theme: 'dark', fontSize: 'medium', autoUpdate: true, invView: 'loc' }
   }
 }
 
+let windowTheme = ''
 function applySettings(s) {
   const root = document.documentElement
   root.dataset.theme = s.theme
   root.style.setProperty('--ui-scale', String(FONT_SCALES[s.fontSize]))
+  // 視窗標題列跟著換成深色／淺色
+  if (windowTheme !== s.theme) {
+    windowTheme = s.theme
+    api.setWindowTheme(s.theme)
+  }
 }
 
 export const useUiStore = defineStore('ui', () => {
