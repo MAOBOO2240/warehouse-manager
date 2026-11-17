@@ -6,8 +6,10 @@
   - 按鈕、標籤、切換鈕一律膠囊形（全圓角），頂部一道微光、底部一層柔影，做出微凸的按壓手感。
   - 所有圓角使用 G2 連續曲率（corner-shape: squircle），需 WebView2 139 以上；較舊版本自動顯示為一般圓角。
   - 深色與淺色兩組色彩，在「設定」中切換；文字大小以整體縮放（zoom）調整。
-  - 深色＝石墨灰：視窗底色是 #8A8B8A，卡片、側邊欄、選單是同一個色系裡更深的炭灰。
-    視窗底色是中灰，直接放在上面的字（頁面標題、說明）用深色字；卡片裡的字用淺色字——見下方「文字顏色跟著底色走」。
+  - 深色有兩組配色（設定 → 外觀）：
+    「藍墨」＝帶一點藍的深色，整個畫面都是深底淺字（預設）；
+    「霧灰」＝視窗底色 #8A8B8A，卡片、側邊欄、選單是同色系較深的灰。視窗底色是中灰，直接放在上面的字
+    （頁面標題、說明）用深色字，卡片裡的字用淺色字——見下方「文字顏色跟著底色走」。
 */
 @theme static {
   /* 淺色（預設值；深色在下方覆寫） */
@@ -66,51 +68,95 @@
 }
 
 /*
-  深色（石墨灰）：以 #8A8B8A 為視窗底色，其餘是同色系的炭灰與淺灰。
-  對比（WCAG）：卡片上的主要文字 12.6:1、次要文字 9.5:1、說明文字 5.9:1；
-  視窗底色上的深色字 5.7:1／4.8:1；實心按鈕一律「亮色底＋深色字」（6.5:1 以上）。
+  深色「藍墨」（預設的深色）：帶一點藍的深底，卡片比底色亮一階，文字是偏冷的淺灰。
+  對比（WCAG）：卡片上的主要文字 13:1、次要文字 9.7:1、說明文字 6.6:1；實心按鈕一律「亮色底＋深色字」。
 */
 :root[data-theme="dark"] {
-  --color-canvas: #8a8b8a;
-  --color-nav: #242524;
-  --color-panel: #2b2c2b;
-  --color-raised: #3a3b3a;
-  --color-hover: #464746;
-  --color-line: #434443;
-  --color-ink: #f2f3f2;
-  --color-ink-2: #d4d5d4;
-  --color-mute: #a8a9a8;
+  --color-canvas: #10141a;
+  --color-nav: #161b23;
+  --color-panel: #1c232d;
+  --color-raised: #28313e;
+  --color-hover: #33404f;
+  --color-line: #303a48;
+  --color-ink: #e8ecf1;
+  --color-ink-2: #c7ced8;
+  --color-mute: #a3abb6;
   --color-accent: #5aa2ff;
-  --color-accent-soft: #1e2e47;
+  --color-accent-soft: #1a2c47;
   --color-on-accent: #061a36;
   --color-go: #3ecb78;
-  --color-go-soft: #173824;
+  --color-go-soft: #143524;
   --color-on-go: #04230f;
   --color-signal: #ff6b61;
-  --color-signal-soft: #45211e;
+  --color-signal-soft: #44211f;
   --color-on-signal: #2e0907;
   --color-safety: #ffcc33;
-  --color-safety-soft: #3d3317;
+  --color-safety-soft: #3b3217;
   --color-on-safety: #2a1d00;
   --color-violet: #b197ff;
-  --color-violet-soft: #2e2550;
+  --color-violet-soft: #2b2550;
   --color-on-violet: #1a0e3c;
   --color-amber: #f5b329;
   --color-on-amber: #2a1d00;
   --color-slate: #a9b9cf;
   --color-on-slate: #10161f;
-  --color-menu: #303130;
-  --color-field: #1d1e1d;
-  --color-field-line: #707170;
+  --color-menu: #212936;
+  --color-field: #0c1015;
+  --color-field-line: #5e6878;
   --color-field-line-hover: #8a8b8a;
   --color-chart-in: #25a35a;
   --color-chart-out: #3987e5;
   --color-chart-damage: #e66767;
   --color-chart-bar: #7b8cf5;
-  --color-chart-track: #3a3b3a;
+  --color-chart-track: #28313e;
   color-scheme: dark;
 }
 
+/*
+  深色「霧灰」：視窗底色 #8A8B8A，卡片、側邊欄、選單是同色系較深的灰，對比柔和。
+  底是中灰，所以強調色都調得比較淡、比較亮（淡藍、淡綠、淡紅…），字才看得清楚；
+  卡片上的主要文字 7.6:1、次要文字 6.6:1、說明文字 5.5:1；視窗底色上的字用深色（5.7:1）。
+*/
+:root[data-theme="dark"][data-palette="mist"] {
+  --color-canvas: #8a8b8a;
+  --color-nav: #434443;
+  --color-panel: #545554;
+  --color-raised: #474847;
+  --color-hover: #3c3d3c;
+  --color-line: #6b6c6b;
+  --color-ink: #ffffff;
+  --color-ink-2: #eeefee;
+  --color-mute: #dcdddc;
+  --color-accent: #bcd9ff;
+  --color-accent-soft: #3b475a;
+  --color-on-accent: #0b2445;
+  --color-go: #93f0b9;
+  --color-go-soft: #36503f;
+  --color-on-go: #06301a;
+  --color-signal: #ffc9c4;
+  --color-signal-soft: #5c3b39;
+  --color-on-signal: #4a100c;
+  --color-safety: #ffd75e;
+  --color-safety-soft: #544d2c;
+  --color-on-safety: #2a1d00;
+  --color-violet: #ddd1ff;
+  --color-violet-soft: #48425f;
+  --color-on-violet: #24154f;
+  --color-amber: #ffd978;
+  --color-on-amber: #2a1d00;
+  --color-slate: #e1e7f0;
+  --color-on-slate: #141b26;
+  --color-menu: #4d4e4d;
+  --color-field: #3a3b3a;
+  --color-field-line: #9b9c9b;
+  --color-field-line-hover: #c4c5c4;
+  /* 圖表：中灰的底上長條要夠亮才分得出來（和底色 3:1 以上，色弱也分得開）；另有圖例、數字與表格可以對照 */
+  --color-chart-in: #5eea9b;
+  --color-chart-out: #86bcff;
+  --color-chart-damage: #ff9c92;
+  --color-chart-bar: #c9cfff;
+  --color-chart-track: #474847;
+}
 /* 立體氣泡質感：頂部微光＋底部柔影（依主題調整強度） */
 :root {
   --gloss: inset 0 1px 0 rgb(255 255 255 / 0.45);
@@ -122,6 +168,12 @@
   --tone-fg: var(--color-on-accent);
   /* 鍵盤焦點外框的顏色 */
   --focus: var(--color-accent);
+  /* 淡色底（彈窗標題、資訊卡）是把主題色混進這個底色 */
+  --tint-base: var(--color-panel);
+  /* 小膠囊按鈕（.act）：字＝主題色混多少進白色；底、滑鼠移上去的底＝主題色佔幾成 */
+  --act-mix: 78%;
+  --act-bg: 13%;
+  --act-bg-hover: 24%;
   color-scheme: light;
 }
 :root[data-theme="dark"] {
@@ -129,37 +181,43 @@
   --bubble-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 18px -10px rgb(0 0 0 / 0.6);
   --card-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 2px 4px rgb(0 0 0 / 0.16), 0 18px 36px -20px rgb(0 0 0 / 0.6);
   --field-inset: inset 0 2px 4px rgb(0 0 0 / 0.3);
-  /* 白色的焦點外框在中灰的視窗底色與炭灰的卡片上都看得清楚（藍色在中灰上只有 1.3:1） */
+  /* 白色的焦點外框在深色與中灰的底上都看得清楚 */
   --focus: #ffffff;
+}
+:root[data-theme="dark"][data-palette="mist"] {
+  --card-shadow: 0 1px 0 rgb(255 255 255 / 0.07) inset, 0 2px 4px rgb(0 0 0 / 0.12), 0 14px 30px -18px rgb(0 0 0 / 0.45);
+  /* 卡片是中灰：淡色底改用更深的灰來混，字才夠清楚；小膠囊按鈕的字再淡一點、滑鼠移上去的底不要太亮 */
+  --tint-base: #424342;
+  --act-mix: 40%;
+  --act-bg-hover: 18%;
 }
 
 /*
-  文字顏色跟著底色走（只有深色主題需要）：
+  文字顏色跟著底色走（只有「霧灰」需要：它的視窗底色是中灰，其他配色的底和卡片是同一種明暗）：
   - .on-canvas：直接鋪在視窗底色 #8A8B8A 上的區域（各頁面的標題與說明）→ 深色字。
   - 深色底的區塊（卡片、彈窗、選單）把文字換回淺色；輸入框、膠囊按鈕這類「自己有深色底」的元件也是。
-  淺色主題兩邊的值相同，所以不用另外寫。
   放在 base 層：這裡設定的 color 只是預設值，元件與 text-* 工具類別（例如 text-signal）仍然優先。
 */
 @layer base {
-  :root[data-theme="dark"] .on-canvas {
+  :root[data-palette="mist"] .on-canvas {
     --color-ink: #0d0e0d;
     --color-ink-2: #161716;
     --color-mute: #1f201f;
     --color-line: #6f706f;
     color: var(--color-ink);
   }
-  :root[data-theme="dark"] :is(.panel, .modal-panel, .menu-panel, .surface) {
-    --color-ink: #f2f3f2;
-    --color-ink-2: #d4d5d4;
-    --color-mute: #a8a9a8;
-    --color-line: #434443;
+  :root[data-palette="mist"] :is(.panel, .modal-panel, .menu-panel, .surface) {
+    --color-ink: #ffffff;
+    --color-ink-2: #eeefee;
+    --color-mute: #dcdddc;
+    --color-line: #6b6c6b;
     color: var(--color-ink);
   }
-  :root[data-theme="dark"] :is(.field, .date-box, .pill, .btn-ghost, .menu-trigger, .loc-badge, .seg, .chip) {
-    --color-ink: #f2f3f2;
-    --color-ink-2: #d4d5d4;
-    --color-mute: #a8a9a8;
-    --color-line: #434443;
+  :root[data-palette="mist"] :is(.field, .date-box, .pill, .btn-ghost, .menu-trigger, .loc-badge, .seg, .chip) {
+    --color-ink: #ffffff;
+    --color-ink-2: #eeefee;
+    --color-mute: #dcdddc;
+    --color-line: #6b6c6b;
   }
 }
 
@@ -332,7 +390,7 @@
       0 30px 70px -24px rgb(0 0 0 / 0.55);
   }
   .modal-head {
-    background: linear-gradient(180deg, color-mix(in oklab, var(--tone) 20%, var(--color-panel)), color-mix(in oklab, var(--tone) 4%, var(--color-panel)));
+    background: linear-gradient(180deg, color-mix(in oklab, var(--tone) 20%, var(--tint-base)), color-mix(in oklab, var(--tone) 4%, var(--tint-base)));
     border-bottom: 1px solid color-mix(in oklab, var(--tone) 22%, var(--color-line));
   }
   .modal-icon {
@@ -349,7 +407,7 @@
   /* 彈窗中的資訊卡：主題色淡底＋色框 */
   .tone-card {
     @apply rounded-2xl px-5 py-3.5;
-    background: color-mix(in oklab, var(--tone) 11%, var(--color-panel));
+    background: color-mix(in oklab, var(--tone) 11%, var(--tint-base));
     border: 1.5px solid color-mix(in oklab, var(--tone) 32%, transparent);
   }
   .btn-violet {
@@ -476,7 +534,7 @@ body.is-sorting * {
     --act-ink: var(--tone);
   }
   :root[data-theme="dark"] :is(.act, .icon-badge) {
-    --act-ink: color-mix(in oklab, var(--tone) 78%, white);
+    --act-ink: color-mix(in oklab, var(--tone) var(--act-mix), white);
   }
 
   /* ---- 庫存清單每一列的操作：小膠囊，文字與淡底用該動作的顏色（--tone） ---- */
@@ -484,10 +542,10 @@ body.is-sorting * {
     @apply inline-flex items-center justify-center rounded-full px-2.5 py-1 text-[13px] font-semibold whitespace-nowrap transition-colors select-none active:translate-y-px;
     corner-shape: round;
     color: var(--act-ink);
-    background: color-mix(in oklab, var(--tone) 13%, transparent);
+    background: color-mix(in oklab, var(--tone) var(--act-bg), transparent);
   }
   .act:hover {
-    background: color-mix(in oklab, var(--tone) 24%, transparent);
+    background: color-mix(in oklab, var(--tone) var(--act-bg-hover), transparent);
   }
   /* 放在好幾個地點的品項：地點欄顯示「N 個地點」 */
   .loc-multi {

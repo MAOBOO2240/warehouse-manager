@@ -4,6 +4,7 @@ import { api } from '../api'
 
 const SETTINGS_KEY = 'warehouse-ui-settings'
 export const FONT_SCALES = { small: 0.9, medium: 1, large: 1.15 }
+const THEMES = ['ink', 'mist', 'light']
 
 /** 「清除緩存」後重新整理時，設定與結果經由網址 hash 帶回（localStorage 可能已被清空） */
 function readCacheHash() {
@@ -21,7 +22,8 @@ function loadSettings() {
   try {
     const raw = cacheHash?.settings ?? JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')
     return {
-      theme: raw.theme === 'light' ? 'light' : 'dark',
+      // 外觀：ink＝深色「藍墨」（預設）、mist＝深色「霧灰」、light＝淺色；舊版存的 'dark' 當成藍墨
+      theme: THEMES.includes(raw.theme) ? raw.theme : 'ink',
       fontSize: raw.fontSize in FONT_SCALES ? raw.fontSize : 'medium',
       // 開啟程式時發現新版本就自動更新；關掉的話改成先詢問
       autoUpdate: raw.autoUpdate !== false,
@@ -29,19 +31,23 @@ function loadSettings() {
       invView: raw.invView === 'item' ? 'item' : 'loc',
     }
   } catch {
-    return { theme: 'dark', fontSize: 'medium', autoUpdate: true, invView: 'loc' }
+    return { theme: 'ink', fontSize: 'medium', autoUpdate: true, invView: 'loc' }
   }
 }
 
 let windowTheme = ''
 function applySettings(s) {
   const root = document.documentElement
-  root.dataset.theme = s.theme
+  // data-theme 只分深色／淺色；深色的兩組配色用 data-palette 區分（藍墨不用標）
+  const mode = s.theme === 'light' ? 'light' : 'dark'
+  root.dataset.theme = mode
+  if (s.theme === 'mist') root.dataset.palette = 'mist'
+  else delete root.dataset.palette
   root.style.setProperty('--ui-scale', String(FONT_SCALES[s.fontSize]))
   // 視窗標題列跟著換成深色／淺色
-  if (windowTheme !== s.theme) {
-    windowTheme = s.theme
-    api.setWindowTheme(s.theme)
+  if (windowTheme !== mode) {
+    windowTheme = mode
+    api.setWindowTheme(mode)
   }
 }
 

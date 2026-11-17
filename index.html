@@ -6,7 +6,8 @@
     <title>倉儲管理系統</title>
     <!-- 程式載入前先套用上次選的外觀：開啟時視窗不會先閃一下別的底色 -->
     <style>
-      html { background: #8a8b8a; }
+      html { background: #10141a; }
+      html[data-palette="mist"] { background: #8a8b8a; }
       html[data-theme="light"] { background: #eceef3; }
     </style>
     <script>
@@ -18,6 +19,8 @@
           var m = /[#&]s=([^&]*)/.exec(location.hash)
           if (m) s = JSON.parse(decodeURIComponent(m[1].replace(/\+/g, ' ')))
           if (s && s.theme === 'light') theme = 'light'
+          // 深色的另一組配色「霧灰」
+          if (s && s.theme === 'mist') document.documentElement.dataset.palette = 'mist'
         } catch (e) {
           /* 讀不到就用預設的深色 */
         }

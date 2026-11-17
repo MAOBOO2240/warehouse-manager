@@ -106,9 +106,11 @@ const sizes = [
   { id: 'medium', label: '中' },
   { id: 'small', label: '小' },
 ]
+// 外觀：兩組深色（藍墨、霧灰）和一組淺色
 const themes = [
-  { id: 'dark', label: '深色' },
-  { id: 'light', label: '淺色' },
+  { id: 'ink', label: '藍墨', hint: '深色：帶一點藍的深底' },
+  { id: 'mist', label: '霧灰', hint: '深色：灰底配較深的灰色卡片' },
+  { id: 'light', label: '淺色', hint: '淺色' },
 ]
 
 const showSettings = ref(false)
@@ -262,12 +264,13 @@ onBeforeUnmount(() => {
           </button>
         </div>
         <div class="mt-4 mb-2 text-[13px] font-semibold text-mute">外觀</div>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-3 gap-2">
           <button
             v-for="t in themes"
             :key="t.id"
             type="button"
             class="pill"
+            :title="t.hint"
             :class="ui.settings.theme === t.id ? 'pill-on' : ''"
             :aria-pressed="ui.settings.theme === t.id"
             @click="ui.settings.theme = t.id"
