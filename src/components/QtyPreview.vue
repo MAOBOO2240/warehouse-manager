@@ -8,7 +8,7 @@ defineProps({
   unit: { type: String, default: '' },
   caption: { type: String, default: '現有' },
   danger: { type: Boolean, default: false },
-  // 以下三個不給就是原本的樣子（出庫頁沒有用到）
+  // 以下三個不給就是原本的樣子（出貨、損壞沒有用到）
   /** 右邊那個數字的標題：入庫後、移出後、移入後… */
   afterLabel: { type: String, default: '異動後' },
   /** 右邊那個數字的顏色：go（入庫）、violet（改變地點）…；不給是藍色 */

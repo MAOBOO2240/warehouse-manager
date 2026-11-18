@@ -560,7 +560,7 @@ body.is-sorting * {
 }
 
 @layer components {
-  /* ---- 分段切換（庫存清單的顯示方式、入庫方式）：選到的那一格填滿所在區塊的主題色（--tone） ---- */
+  /* ---- 分段切換（庫存清單的顯示方式、出庫方式）：選到的那一格填滿所在區塊的主題色（--tone） ---- */
   .seg {
     @apply inline-flex items-center gap-1 rounded-full bg-raised p-1;
     box-shadow: var(--field-inset);

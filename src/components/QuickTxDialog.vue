@@ -1,5 +1,5 @@
 <script setup>
-// 庫存清單列上的快速操作：入庫（新入庫／改變地點）/ 出庫 / 損壞
+// 庫存清單列上的快速操作：入庫 / 出庫（出貨／改變地點）/ 損壞
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import ModalDialog from './ModalDialog.vue'
 import ComboField from './ComboField.vue'
@@ -13,8 +13,8 @@ const props = defineProps({
   mode: { type: String, required: true }, // 'in' | 'out' | 'damage'
   // { product_id, name, location_id, locs }：locs 是放在好幾個地點時的各地點（這時在視窗裡選地點）
   row: { type: Object, required: true },
-  // 入庫視窗一打開停在哪一邊：'add' 新入庫、'move' 改變地點（品項沒有庫存時只能是新入庫）
-  startTab: { type: String, default: 'add' },
+  // 出庫視窗一打開停在哪一邊：'ship' 出貨、'move' 改變地點
+  startTab: { type: String, default: 'ship' },
 })
 const emit = defineEmits(['close'])
 
@@ -27,7 +27,7 @@ const MODES = {
   out: { title: '出庫', verb: '出貨', btn: 'btn-primary', tone: 'accent' },
   damage: { title: '登記損壞', verb: '登記損壞', btn: 'btn-danger', tone: 'signal' },
 }
-// 改變地點併在入庫裡：一樣是把東西放進某個地點，只是從別的地點搬過來（總數不變），不是從外面進來
+// 改變地點併在出庫裡：一樣是從某個地點把東西拿出來，只是放到別的地點（總數不變），不是離開倉庫
 const MOVE = { title: '改變地點', verb: '移動', btn: 'btn-violet', tone: 'violet' }
 const DAMAGE_REASONS = ['道具受損', '印刷錯誤', '其他']
 
@@ -40,18 +40,18 @@ const product = computed(() => products.get(pid))
 const places = computed(() => stock.rowsOfProduct(pid))
 const total = computed(() => stock.total(pid))
 
-// 入庫的兩種方式（視窗最上面切換）：add＝新入庫（從外面進來，總數增加）；move＝改變地點（從別的地點搬過來，總數不變）
+// 出庫的兩種方式（視窗最上面切換）：ship＝出貨（離開倉庫，總數減少）；move＝改變地點（搬到別的地點，總數不變）
 const canMove = computed(() => total.value > 0)
-const tab = ref(props.startTab === 'move' && canMove.value ? 'move' : 'add')
-const isMove = computed(() => props.mode === 'in' && tab.value === 'move')
-const adding = computed(() => props.mode === 'in' && tab.value === 'add')
+const tab = ref(props.startTab === 'move' && canMove.value ? 'move' : 'ship')
+const isMove = computed(() => props.mode === 'out' && tab.value === 'move')
+const adding = computed(() => props.mode === 'in')
 const cfg = computed(() => (isMove.value ? MOVE : MODES[props.mode]))
 // 會扣掉某個地點庫存的操作：出庫、損壞、改變地點（從來源地點移出）
 const deducts = computed(() => !adding.value)
 
 // 扣庫存時可以選的地點；null＝固定是這一列的地點。
-// 這一列代表好幾個地點時一定要自己選；改變地點時，萬一這一列的地點沒有庫存（東西放在別的地方），也列出來選
-const choices = locs ?? (props.mode === 'in' && places.value.length && stock.qty(pid, rowLoc) <= 0 ? places.value : null)
+// 這一列代表好幾個地點時一定要自己選；萬一這一列的地點沒有庫存（東西放在別的地方），也列出來選
+const choices = locs ?? (props.mode !== 'in' && places.value.length && stock.qty(pid, rowLoc) <= 0 ? places.value : null)
 // 從哪個地點扣（改變地點的來源）；null 表示還沒選
 const from = ref(choices ? (choices.length === 1 ? choices[0].location_id : null) : rowLoc)
 const available = computed(() => (from.value === null ? 0 : stock.qty(pid, from.value)))
@@ -89,7 +89,7 @@ const autoQty = () => {
   return available.value > 0 ? String(Math.min(firstQty, available.value)) : ''
 }
 const qtyText = ref(autoQty())
-const qtyTouched = ref(false) // 使用者自己改過數量：換地點、換入庫方式時不再自動帶入
+const qtyTouched = ref(false) // 使用者自己改過數量：換地點、換出庫方式時不再自動帶入
 watch([from, tab], () => {
   if (!qtyTouched.value) qtyText.value = autoQty()
 })
@@ -224,12 +224,12 @@ onMounted(focusNext)
       <svg v-else viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4.5M12 17v.01M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>
     </template>
     <form class="space-y-5" @submit.prevent="submit">
-      <!-- 入庫方式：東西是從外面進來（新入庫），還是從別的地點搬過來（改變地點） -->
-      <div v-if="mode === 'in'">
-        <div class="seg grid w-full grid-cols-2" role="group" aria-label="入庫方式">
-          <button type="button" class="seg-item" :class="tab === 'add' ? 'is-on' : ''" :aria-pressed="tab === 'add'" @click="setTab('add')">
-            <svg viewBox="0 0 24 24" class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v10M7.5 9.5 12 14l4.5-4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg>
-            新入庫
+      <!-- 出庫方式：東西離開倉庫（出貨），還是搬到別的地點（改變地點） -->
+      <div v-if="mode === 'out'">
+        <div class="seg grid w-full grid-cols-2" role="group" aria-label="出庫方式">
+          <button type="button" class="seg-item" :class="tab === 'ship' ? 'is-on' : ''" :aria-pressed="tab === 'ship'" @click="setTab('ship')">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 14V4M7.5 8.5 12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg>
+            出貨
           </button>
           <button type="button" class="seg-item" :class="tab === 'move' ? 'is-on' : ''" :aria-pressed="tab === 'move'" :disabled="!canMove" @click="setTab('move')">
             <svg viewBox="0 0 24 24" class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13M13.5 4.5 17 8l-3.5 3.5M20 16H7M10.5 12.5 7 16l3.5 3.5" /></svg>
@@ -237,7 +237,7 @@ onMounted(focusNext)
           </button>
         </div>
         <p class="mt-2 pl-1 text-[12.5px] text-mute">
-          {{ !canMove ? '這個品項目前沒有庫存，沒有東西可以移動' : isMove ? '把現有的庫存搬到別的地點，總數不變' : '新進的貨放進倉庫，總數會增加' }}
+          {{ !canMove ? '這個品項目前沒有庫存' : isMove ? '把現有的庫存搬到別的地點，總數不變' : '東西離開倉庫，總數會減少' }}
         </p>
       </div>
 

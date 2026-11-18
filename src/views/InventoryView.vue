@@ -273,7 +273,7 @@ function showItemByLoc(r) {
   ui.settings.invView = 'loc'
 }
 
-/* ---- 列上的快速操作（改變地點併在入庫視窗裡） ---- */
+/* ---- 列上的快速操作（改變地點併在出庫視窗裡） ---- */
 const dialog = ref(null) // { mode, row }
 function openTx(mode, r) {
   if (project.readOnly) return ui.error('資料檔異常，目前為唯讀模式')
@@ -281,7 +281,7 @@ function openTx(mode, r) {
   dialog.value = { mode, row: { product_id: r.product_id, name: r.name, location_id: r.location_id, locs: r.locs || null } }
 }
 // 沒有用存放地點的專案不提地點
-const inTitle = computed(() => (stock.usesLocations ? '入庫，或把這裡的庫存改放到其他地點' : undefined))
+const outTitle = '出貨，或把這裡的庫存改放到其他地點'
 
 /* ---- 移除存放地點 ---- */
 const removing = ref(null) // 要移除的地點名稱
@@ -630,8 +630,8 @@ async function exportCsv() {
                 <td v-if="!narrow" class="num px-3 py-3 text-[13.5px] whitespace-nowrap text-mute" :title="fmtTime(r.last_updated)">{{ fmtShort(r.last_updated) }}</td>
                 <td class="px-2 py-3">
                   <div class="flex justify-center gap-1 whitespace-nowrap">
-                    <button type="button" class="act" style="--tone: var(--color-go)" :title="inTitle" @click="openTx('in', r)">入庫</button>
-                    <button type="button" class="act" style="--tone: var(--color-accent)" @click="openTx('out', r)">出庫</button>
+                    <button type="button" class="act" style="--tone: var(--color-go)" @click="openTx('in', r)">入庫</button>
+                    <button type="button" class="act" style="--tone: var(--color-accent)" :title="outTitle" @click="openTx('out', r)">出庫</button>
                     <button type="button" class="act" style="--tone: var(--color-signal)" @click="openTx('damage', r)">損壞</button>
                   </div>
                 </td>
